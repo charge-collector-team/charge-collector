@@ -218,7 +218,7 @@ private fun SilverProgress(have: Int, modifier: Modifier = Modifier) {
         append("은 배지까지 동 ")
         withStyle(SpanStyle(color = accent)) { append("$have / $SYNTH_COST") }
     }
-    Text(text, modifier, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TXT, textAlign = TextAlign.Center)
+    Text(text, modifier, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT, textAlign = TextAlign.Center)
 }
 
 /** Accent ring that fills up to [progress] when shown; its glow breathes while [pulse]. */
@@ -323,7 +323,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
         Spacer(Modifier.height(12.dp))
         Text(
             region?.name?.let { "${it.substringBeforeLast(' ')}\n${it.substringAfterLast(' ')}" } ?: "첫 충전을\n기다리는 중",
-            fontSize = if (compact) 44.sp else 52.sp, lineHeight = if (compact) 50.sp else 60.sp, fontWeight = FontWeight.ExtraBold, color = TXT,
+            fontSize = if (compact) 40.sp else 52.sp, lineHeight = if (compact) 48.sp else 60.sp, fontWeight = FontWeight.Bold, color = TXT,
         )
         Spacer(Modifier.height(8.dp))
         Sub(
@@ -350,7 +350,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
                     Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(Color(0x0DFFFFFF))
                         .border(1.dp, LINE, RoundedCornerShape(20.dp)).padding(20.dp),
                 ) {
-                    Text("$n", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+                    Text("$n", fontSize = 40.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = TXT)
                     Text(label, fontSize = 20.sp, color = SUB)
                 }
             }
@@ -409,7 +409,7 @@ private fun Showcase(
                     Title("내 진열장")
                     Text(
                         "배지 ${state.owned.values.sum()}개 · 지역 ${idx.regions.count { Game.engine.cellTier(state, idx, it.index) != null }}곳",
-                        fontSize = 22.sp, color = SUB,
+                        fontSize = 20.sp, color = SUB,
                     )
                 }
                 FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
@@ -448,7 +448,7 @@ private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListSt
     Column(modifier) {
         Column(Modifier.padding(start = 32.dp, end = 32.dp, top = 32.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Eyebrow("시·군·구 선택")
-            Text("배지를 주는 지역 ${regions.size}곳", fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+            Text("배지를 주는 지역 ${regions.size}곳", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = TXT)
             Sub("가 본 곳 ${regions.count { Game.engine.visited(state, it.index) }}곳 · 배지를 모은 곳 ${regions.count { Game.engine.cellTier(state, idx, it.index) != null }}곳")
         }
         LazyColumn(
@@ -482,7 +482,7 @@ private fun RegionRow(label: String, trailing: String, selected: Boolean, onClic
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(label, Modifier.weight(1f), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, Modifier.weight(1f), fontSize = 24.sp, fontWeight = FontWeight.Medium, color = TXT, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (trailing.isNotEmpty()) Text(trailing, fontSize = 20.sp, color = if (selected) accent else SUB)
     }
 }
@@ -524,7 +524,7 @@ private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badg
             ) {
                 Medal(last.badge, 60.dp)
                 Column(Modifier.weight(1f)) {
-                    Text(last.station.name, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
+                    Text(last.station.name, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = TXT)
                     Note("마지막 충전 ${last.date} · 모두 ${list.size}번")
                 }
             }
@@ -570,7 +570,7 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
                 contentAlignment = Alignment.Center,
             ) { Medal(badge, medal, count > 0) }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${shortArt(idx, badge.design.artKey)} · ${designName(badge.design)}", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+                Text("${shortArt(idx, badge.design.artKey)} · ${designName(badge.design)}", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = TXT)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TierTag(badge.tier)
                     Sub(idx.region(s.regionIndex).name)
@@ -661,7 +661,7 @@ private fun AccentChip(text: String) {
     Text(
         text,
         Modifier.clip(CircleShape).background(accent.copy(alpha = 0.14f)).padding(horizontal = 24.dp, vertical = 10.dp),
-        fontSize = 24.sp, fontWeight = FontWeight.Bold, color = accent,
+        fontSize = 24.sp, fontWeight = FontWeight.Medium, color = accent,
     )
 }
 
@@ -713,7 +713,7 @@ fun AcquiredScreen(onDone: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Eyebrow("${rec.station.name} · ${rec.date}", Modifier.enter(0))
         Spacer(Modifier.height(10.dp))
-        Text("충전이 확인됐어요", Modifier.enter(80), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT, textAlign = TextAlign.Center)
+        Text("충전이 확인됐어요", Modifier.enter(80), fontSize = 40.sp, fontWeight = FontWeight.Bold, color = TXT, textAlign = TextAlign.Center)
         Spacer(Modifier.weight(1f))
         Box(Modifier.size(460.dp), contentAlignment = Alignment.Center) {
             Box(
@@ -737,7 +737,7 @@ fun AcquiredScreen(onDone: () -> Unit) {
                 }.shine { sweep.value },
             )
         }
-        Text("${shortArt(idx, b.design.artKey)} · ${designName(b.design)}", Modifier.enter(560), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+        Text("${shortArt(idx, b.design.artKey)} · ${designName(b.design)}", Modifier.enter(560), fontSize = 40.sp, fontWeight = FontWeight.Bold, color = TXT)
         Spacer(Modifier.height(6.dp))
         Sub("${tierLabel(b.tier)} 배지 1개를 받았어요", Modifier.enter(620))
         Spacer(Modifier.height(18.dp))
@@ -773,7 +773,7 @@ fun ChargingScreen(onDone: () -> Unit) {
             Column(m.glass().cornerGlow(accent).padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Eyebrow(if (Game.charging) "충전 중" else "충전 완료 · 마지막 충전", Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
-                Text(rec.station.name, Modifier.fillMaxWidth(), fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+                Text(rec.station.name, Modifier.fillMaxWidth(), fontSize = 34.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold, color = TXT)
                 Sub(idx.region(rec.station.regionIndex).name, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(36.dp))
                 ProgressRing(if (wide) 380.dp else 320.dp, (soc ?: 0) / 100f, pulse = Game.charging) {
@@ -787,8 +787,8 @@ fun ChargingScreen(onDone: () -> Unit) {
                                     (slideOutVertically(tween(420, easing = Emphasized)) { if (up) -it else it } + fadeOut(tween(160)))
                             },
                             label = "soc",
-                        ) { v -> Text(v?.toString() ?: "--", fontSize = 96.sp, lineHeight = 100.sp, fontWeight = FontWeight.ExtraBold, color = TXT) }
-                        Text("% 배터리", fontSize = 22.sp, color = SUB)
+                        ) { v -> Text(v?.toString() ?: "--", fontSize = 96.sp, lineHeight = 100.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = TXT) }
+                        Text("% 배터리", fontSize = 20.sp, color = SUB)
                     }
                 }
                 Spacer(Modifier.height(24.dp))
@@ -803,7 +803,7 @@ fun ChargingScreen(onDone: () -> Unit) {
                 Row(Modifier.padding(vertical = 24.dp), horizontalArrangement = Arrangement.spacedBy(36.dp), verticalAlignment = Alignment.CenterVertically) {
                     Well(if (wide) 260.dp else 200.dp) { Medal(rec.badge, if (wide) 230.dp else 178.dp, loopSpace = false) }
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("${shortArt(idx, rec.badge.design.artKey)} · ${designName(rec.badge.design)}", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+                        Text("${shortArt(idx, rec.badge.design.artKey)} · ${designName(rec.badge.design)}", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = TXT)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TierTag(rec.badge.tier)
                             Sub("${rec.date}에 받음")
@@ -873,11 +873,11 @@ private fun TradeSteps() {
     Row(Modifier.fillMaxWidth().glass(24.dp).padding(horizontal = 28.dp, vertical = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         steps.forEachIndexed { i, step ->
             Box(Modifier.size(44.dp).clip(CircleShape).background(accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
-                Text("${i + 1}", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = accent)
+                Text("${i + 1}", fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = accent)
             }
             Spacer(Modifier.width(14.dp))
-            Text(step, Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = TXT, maxLines = 2)
-            if (i < steps.lastIndex) Text("›", Modifier.padding(horizontal = 14.dp), fontSize = 36.sp, color = SUB)
+            Text(step, Modifier.weight(1f), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = TXT, maxLines = 2)
+            if (i < steps.lastIndex) Text("›", Modifier.padding(horizontal = 14.dp), fontSize = 34.sp, color = SUB)
         }
     }
 }
@@ -897,10 +897,10 @@ private fun FriendCard(f: Friend, pending: Int, modifier: Modifier, onTrade: () 
     Column(modifier.glass().cornerGlow(c1).padding(28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Box(Modifier.size(84.dp).clip(CircleShape).background(Brush.linearGradient(listOf(c1, c2))), contentAlignment = Alignment.Center) {
-                Text(f.name.substringAfterLast(' ').take(1), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = INK)
+                Text(f.name.substringAfterLast(' ').take(1), fontSize = 34.sp, fontWeight = FontWeight.Bold, color = INK)
             }
             Column(Modifier.weight(1f)) {
-                Text(f.name, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(f.name, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TXT, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Note(f.id)
             }
             if (pending > 0) AccentChip("제안 중 ${pending}건")
@@ -974,7 +974,7 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
                 HorizontalDivider(color = LINE)
                 val myPicker: @Composable (Modifier) -> Unit = { m ->
                     Column(m, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("내 배지", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
+                        Text("내 배지", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = TXT)
                         if (mine.isEmpty()) Sub("가진 배지가 없어요")
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             mine.forEach { b ->
@@ -991,7 +991,7 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
                 }
                 val friendPicker: @Composable (Modifier) -> Unit = { m ->
                     Column(m, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("${friend.name}의 배지", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
+                        Text("${friend.name}의 배지", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = TXT)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             friend.badges.forEach { (b, n) ->
                                 BadgeSlot(b, n, owned = true, well = 112.dp, selected = want == b, enabled = b.tier == Tier.BRONZE) { want = b }
@@ -1017,7 +1017,7 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
 @Composable
 private fun SwapSlot(b: Badge?, title: String, sub: String, modifier: Modifier, well: Dp) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = SUB, textAlign = TextAlign.Center)
+        Text(title, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = SUB, textAlign = TextAlign.Center)
         Box(Modifier.padding(top = well * 0.12f)) {
             Well(well) {
                 AnimatedContent(
@@ -1028,7 +1028,7 @@ private fun SwapSlot(b: Badge?, title: String, sub: String, modifier: Modifier, 
             }
         }
         if (b != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("${shortArt(Game.index, b.design.artKey)} · ${designName(b.design)}", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+            Text("${shortArt(Game.index, b.design.artKey)} · ${designName(b.design)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
             TierTag(b.tier)
         }
         Sub(sub)
@@ -1182,7 +1182,7 @@ private fun OrnamentPanel(slot: Int, current: Badge?, year: Int, onSet: (Badge?)
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("장식 ${slot + 1}", Modifier.weight(1f), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+            Text("장식 ${slot + 1}", Modifier.weight(1f), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TXT)
             CloseBtn(onClose)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1193,7 +1193,7 @@ private fun OrnamentPanel(slot: Int, current: Badge?, year: Int, onSet: (Badge?)
             if (current == null) Sub("아직 비어 있어요. '바꾸기'에서 배지를 걸어 보세요.")
             else {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("${shortArt(idx, current.design.artKey)} · ${designName(current.design)}", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+                    Text("${shortArt(idx, current.design.artKey)} · ${designName(current.design)}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TXT)
                     TierTag(current.tier)
                 }
                 badgeStory(state, idx, current, year).forEach { InfoText(it) }

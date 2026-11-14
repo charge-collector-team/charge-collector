@@ -157,10 +157,10 @@ fun DrawScope.drawSourceMark(s: Source, c: Offset, r: Float) {
     }
 }
 
-private fun textPaint(color: Color, size: Float, bold: Boolean = false, center: Boolean = false) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+private fun textPaint(color: Color, size: Float, bold: Boolean = false, center: Boolean = false, face: Typeface? = null) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     this.color = color.toArgb()
     textSize = size
-    typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+    typeface = face ?: if (bold) TextFaceBold else TextFace
     if (center) textAlign = Paint.Align.CENTER
 }
 
@@ -647,7 +647,7 @@ fun DrawScope.drawAnniversaryTitle(count: Int, period: String) {
     text("1년 동안 충전하며 다닌 길", x0, mid, textPaint(TXT, u * 0.05f, bold = true))
     text("직접 충전한 장소 ${count}곳을", x0, mid + u * 0.065f, textPaint(SUB, u * 0.036f))
     text("첫 방문 순서로 이었어요", x0, mid + u * 0.112f, textPaint(SUB, u * 0.036f))
-    text(period, x0, h - pad, textPaint(ACCENT, u * 0.042f, bold = true))
+    text(period, x0, h - pad, textPaint(ACCENT, u * 0.042f, face = NumFaceBold))
 }
 
 /** The boundary data's source, bottom right; 공공누리 제1유형 asks for it on every use. */

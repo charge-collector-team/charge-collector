@@ -192,7 +192,7 @@ class MainActivity : ComponentActivity() {
                 verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
             ) {
                 Eyebrow("주행 중")
-                Text("정차 후 이용해 주세요", fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, color = TXT, textAlign = TextAlign.Center)
+                Text("정차 후 이용해 주세요", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = TXT, textAlign = TextAlign.Center)
                 Sub("주행 중에는 화면을 잠시 닫아 둬요. 충전 확인은 계속돼요.")
             }
         }
@@ -287,7 +287,7 @@ private fun Brand() {
             append("충전 ")
             withStyle(SpanStyle(color = accent)) { append("수집첩") }
         },
-        fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = TXT,
+        fontSize = 34.sp, fontWeight = FontWeight.Bold, color = TXT,
     )
 }
 
@@ -333,7 +333,7 @@ private fun TopBar(wide: Boolean, root: Screen, onTab: (Screen) -> Unit) {
         Text(
             "P · 정차 중",
             Modifier.clip(CircleShape).background(accent.copy(alpha = 0.12f)).padding(horizontal = 18.dp, vertical = 10.dp),
-            fontSize = 22.sp, fontWeight = FontWeight.Bold, color = accent,
+            fontSize = 20.sp, fontWeight = FontWeight.Medium, color = accent,
         )
     }
     val tab: @Composable (String, Screen) -> Unit = { label, s -> Tab(label, root == s, { slots[s] = it }) { onTab(s) } }
@@ -377,7 +377,7 @@ private fun Tab(label: String, active: Boolean, onSlot: (Rect) -> Unit, onClick:
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(1f))
-        Text(label, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, color = color, maxLines = 1)
+        Text(label, fontSize = 28.sp, fontWeight = FontWeight.Medium, color = color, maxLines = 1)
         Spacer(Modifier.weight(1f))
         Spacer(Modifier.fillMaxWidth().height(4.dp).onGloballyPositioned { onSlot(it.boundsInRoot()) })
     }
@@ -394,10 +394,10 @@ fun ChargeTheme(season: Season, content: @Composable () -> Unit) {
     }
     val t = Typography()
     val typography = t.copy(
-        bodyLarge = t.bodyLarge.copy(fontSize = 24.sp, lineHeight = 34.sp),
-        bodyMedium = t.bodyMedium.copy(fontSize = 24.sp, lineHeight = 34.sp),
-        bodySmall = t.bodySmall.copy(fontSize = 20.sp, lineHeight = 28.sp),
-        labelLarge = t.labelLarge.copy(fontSize = 24.sp),
+        bodyLarge = t.bodyLarge.copy(fontFamily = TextFont, fontSize = 24.sp, lineHeight = 34.sp),
+        bodyMedium = t.bodyMedium.copy(fontFamily = TextFont, fontSize = 24.sp, lineHeight = 34.sp),
+        bodySmall = t.bodySmall.copy(fontFamily = TextFont, fontSize = 20.sp, lineHeight = 28.sp),
+        labelLarge = t.labelLarge.copy(fontFamily = TextFont, fontSize = 24.sp),
     )
     val colors = darkColorScheme(
         primary = accent,
@@ -422,7 +422,7 @@ fun Btn(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, on
             .background(if (enabled) Brush.horizontalGradient(listOf(ACCENT_START, accent)) else SolidColor(Color(0x14FFFFFF)))
             .padding(horizontal = 36.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = if (enabled) INK else SUB, textAlign = TextAlign.Center) }
+    ) { Text(text, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (enabled) INK else SUB, textAlign = TextAlign.Center) }
 }
 
 /** Secondary action: hairline outline, light label. */
@@ -433,7 +433,7 @@ fun OutlineBtn(text: String, modifier: Modifier = Modifier, enabled: Boolean = t
         modifier.heightIn(min = 76.dp).press(enabled, onClick = onClick).clip(shape).background(Color(0x0AFFFFFF)).border(2.dp, Color(0x2EFFFFFF), shape)
             .padding(horizontal = 32.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = if (enabled) TXT else SUB.copy(alpha = 0.6f), textAlign = TextAlign.Center) }
+    ) { Text(text, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = if (enabled) TXT else SUB.copy(alpha = 0.6f), textAlign = TextAlign.Center) }
 }
 
 /** Filter pill: the visible pill is about 56dp, the touch area 76dp. Active is light on dark. */
@@ -449,20 +449,20 @@ fun Pill(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick
                 .padding(horizontal = 24.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text, fontSize = 22.sp, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium, color = fg, maxLines = 1)
+            Text(text, fontSize = 20.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = fg, maxLines = 1)
         }
     }
 }
 
 @Composable
-fun Title(text: String, modifier: Modifier = Modifier) = Text(text, modifier, fontSize = 38.sp, lineHeight = 46.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+fun Title(text: String, modifier: Modifier = Modifier) = Text(text, modifier, fontSize = 34.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold, color = TXT)
 
 @Composable
-fun Heading(text: String, modifier: Modifier = Modifier) = Text(text, modifier, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TXT)
+fun Heading(text: String, modifier: Modifier = Modifier) = Text(text, modifier, fontSize = 28.sp, fontWeight = FontWeight.Medium, color = TXT)
 
 @Composable
 fun Eyebrow(text: String, modifier: Modifier = Modifier) =
-    Text(text, modifier, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.primary)
+    Text(text, modifier, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.primary)
 
 @Composable
 fun Sub(text: String, modifier: Modifier = Modifier) = Text(text, modifier, fontSize = 24.sp, lineHeight = 34.sp, color = SUB)
@@ -507,7 +507,7 @@ fun StateCard(title: String, body: String, action: String? = null, modifier: Mod
         Sub(body)
         action?.let {
             Box(Modifier.heightIn(min = 76.dp).press(onClick = onAction), contentAlignment = Alignment.CenterStart) {
-                Text(it, fontSize = 24.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(it, fontSize = 24.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -530,7 +530,7 @@ fun Toast(msg: String, modifier: Modifier = Modifier) {
         Text(
             msg,
             Modifier.clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.primary).padding(horizontal = 28.dp, vertical = 18.dp),
-            color = INK, fontSize = 24.sp, fontWeight = FontWeight.Bold,
+            color = INK, fontSize = 24.sp, fontWeight = FontWeight.Medium,
         )
     }
 }
@@ -551,7 +551,7 @@ fun TierTag(t: Tier) {
         Tier.GOLD -> Color(0xFF5C4614) to Color(0xFFFFE08A)
         Tier.LIMITED -> Color(0xFF1E3A66) to Color(0xFFBFDBFF)
     }
-    Text(tierLabel(t), Modifier.clip(CircleShape).background(bg).padding(horizontal = 12.dp, vertical = 1.dp), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = fg)
+    Text(tierLabel(t), Modifier.clip(CircleShape).background(bg).padding(horizontal = 12.dp, vertical = 1.dp), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = fg)
 }
 
 /**
@@ -624,7 +624,7 @@ fun BadgeSlot(
                 Modifier.align(Alignment.BottomStart).offset(x = 4.dp, y = (-4).dp)
                     .clip(CircleShape).background(Color(0xFF0F1A30)).padding(3.dp)
                     .clip(CircleShape).background(NAVY).padding(horizontal = 10.dp, vertical = 1.dp),
-                fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White,
+                fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = Color.White,
             )
         }
         Spacer(Modifier.height(16.dp))
@@ -632,7 +632,7 @@ fun BadgeSlot(
         val design = designName(badge.design)
         Text(
             "${shortArt(Game.index, badge.design.artKey)} · ${design.substringAfterLast(' ').takeIf { it.length > 1 } ?: design}",
-            fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            fontSize = 20.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
             color = if (owned) TXT else SUB,
         )
         // The count is on the medal; this line is only for a region's 동·은·금 slots, empty slots and trade notes.
