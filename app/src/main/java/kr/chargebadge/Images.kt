@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
@@ -58,23 +57,15 @@ import kotlin.random.Random
 /** Medal height / width: the ring tab rises above the disc by this much. */
 const val MEDAL_H = 1.15f
 
-private val CREAM = Color(0xFFF3F1EA)
-private val CYAN = Color(0xFF1BA5D0)
-private val LIGHT_BLUE = Color(0xFFA9C9E6)
-private val PALE_BLUE = Color(0xFFDCE8F3)
-private val TEAL = Color(0xFF3B7F86)
 /** Saved images keep the mock's accent whatever the season. */
 private val ACCENT = Color(0xFF3FB6E8)
 
-/**
- * Drawn badge art from assets/art/{artKey}_{design}.png, decoded once off the main thread.
- * Medals without a file fall back to the vector motif; until loading ends every medal uses the motif.
- */
+/** Whole medals (rim, tab and picture) from assets/medals/{artKey}_{design}_{b|s|g}.webp, decoded once off the main thread. */
 object Art {
-    private var images by mutableStateOf<Map<Design, ImageBitmap>>(emptyMap())
+    private var medals by mutableStateOf<Map<Badge, ImageBitmap>>(emptyMap())
     private var started = false
 
-    fun of(design: Design): ImageBitmap? = images[design]
+    fun medal(badge: Badge): ImageBitmap? = medals[badge]
 
     fun load(context: Context) {
         if (started) return
@@ -82,65 +73,44 @@ object Art {
         val assets = context.applicationContext.assets
         thread(name = "art") {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
-            val loaded = assets.list("art").orEmpty().mapNotNull { name ->
-                val (key, n) = name.removeSuffix(".png").split('_').takeIf { it.size == 2 } ?: return@mapNotNull null
-                val bmp = assets.open("art/$name").use(BitmapFactory::decodeStream) ?: return@mapNotNull null
+            val tiers = mapOf("b" to Tier.BRONZE, "s" to Tier.SILVER, "g" to Tier.GOLD)
+            val whole = assets.list("medals").orEmpty().mapNotNull { name ->
+                val (key, n, t) = name.substringBeforeLast('.').split('_').takeIf { it.size == 3 } ?: return@mapNotNull null
+                val bmp = assets.open("medals/$name").use(BitmapFactory::decodeStream) ?: return@mapNotNull null
                 bmp.setHasMipMap(true)
-                Design(key, n.toIntOrNull() ?: return@mapNotNull null) to bmp.asImageBitmap()
+                Badge(Design(key, n.toIntOrNull() ?: return@mapNotNull null), tiers[t] ?: return@mapNotNull null) to bmp.asImageBitmap()
             }.toMap()
-            Handler(Looper.getMainLooper()).post { images = loaded }
+            Handler(Looper.getMainLooper()).post { medals = whole }
         }
     }
 }
 
-private class Metal(val loop: Color, val stops: List<Color>)
-
-// Conic stops and ring-tab colors from mock A (.medal.b/.s/.g).
-private fun metal(t: Tier) = when (t) {
-    Tier.BRONZE -> Metal(Color(0xFFC88A62), listOf(Color(0xFF7A4A2C), Color(0xFFE3A77F), Color(0xFF9C603C), Color(0xFFF2C29F), Color(0xFF7A4A2C)))
-    Tier.SILVER -> Metal(Color(0xFFC9D2DC), listOf(Color(0xFF6E7C8C), Color(0xFFF4F7FA), Color(0xFF8E9BAA), Color(0xFFFFFFFF), Color(0xFF6E7C8C)))
-    Tier.GOLD -> Metal(Color(0xFFE5C066), listOf(Color(0xFF8C6416), Color(0xFFFFE08A), Color(0xFFB8892A), Color(0xFFFFF2C2), Color(0xFF8C6416)))
-}
-
 /**
  * Medal disc [w] wide with its box's top-left at [at]; the ring tab is drawn above the box.
- * [bare] skips tab, drop shadow and gold glow (for medals inside glass ornaments).
+ * [bare] skips drop shadow and gold glow (for medals inside glass ornaments).
  */
 fun DrawScope.drawMedal(badge: Badge, w: Float, at: Offset = Offset.Zero, bare: Boolean = false) {
     val r = w / 2
     val c = Offset(at.x + r, at.y + r)
-    val m = metal(badge.tier)
+    val whole = Art.medal(badge)
     if (!bare) {
         val sc = Offset(c.x, c.y + r * 0.19f)
         drawCircle(Brush.radialGradient(0f to Color(0x8C000000), 0.7f to Color(0x8C000000), 1f to Color.Transparent, center = sc, radius = r * 1.4f), r * 1.4f, sc)
         if (badge.tier == Tier.GOLD) {
             drawCircle(Brush.radialGradient(0.62f to Color(0x8CE8C66A), 1f to Color.Transparent, center = c, radius = r * 1.5f), r * 1.5f, c)
         }
-        val ls = w * 0.047f
-        val lw = w * 0.297f
-        val lh = w * 0.203f
-        drawRoundRect(
-            m.loop, Offset(c.x - lw / 2 + ls / 2, at.y - w * 0.149f + ls / 2), Size(lw - ls, lh - ls),
-            CornerRadius(w * 0.068f - ls / 2), style = Stroke(ls),
-        )
     }
-    // CSS conic "from 210deg" starts at 7 o'clock; a sweep gradient starts at 3, so turn it 120 degrees.
-    rotate(120f, c) { drawCircle(Brush.sweepGradient(m.stops, c), r, c) }
-    drawCircle(NAVY, r * 0.865f, c)
-    val inner = r * 0.77f
-    drawCircle(CREAM, inner, c)
-    clipPath(Path().apply { addOval(Rect(c, inner)) }) {
-        val art = Art.of(badge.design)
-        if (art == null) drawMotif(badge.design.number, c, inner)
-        else drawImage(
-            art,
-            dstOffset = IntOffset((c.x - inner).roundToInt(), (c.y - inner).roundToInt()),
-            dstSize = IntSize((inner * 2).roundToInt(), (inner * 2).roundToInt()),
-            filterQuality = FilterQuality.High,
-        )
-    }
-    val s = r * 0.865f
-    drawCircle(Brush.linearGradient(0f to Color(0x59FFFFFF), 0.4f to Color.Transparent, start = Offset(c.x - s, c.y - s), end = Offset(c.x + s, c.y + s)), s, c)
+    // Still loading: an empty disc.
+    if (whole == null) return drawCircle(Color(0x14FFFFFF), r, c)
+    // The disc (rim included) of the whole-medal image lands on this medal's disc; its tab rises above.
+    val iw = w / WHOLE_DISC_W
+    val ih = iw * whole.height / whole.width
+    drawImage(
+        whole,
+        dstOffset = IntOffset((c.x - WHOLE_DISC_X * iw).roundToInt(), (c.y - WHOLE_DISC_Y * ih).roundToInt()),
+        dstSize = IntSize(iw.roundToInt(), ih.roundToInt()),
+        filterQuality = FilterQuality.High,
+    )
 }
 
 /** Source as a white glyph in a navy circle: shield-check = charge, arrows = trade, sparkle = synthesis. */
@@ -181,105 +151,6 @@ fun DrawScope.drawSourceMark(s: Source, c: Offset, r: Float) {
                 close()
             }
             drawPath(star, Color.White)
-        }
-    }
-}
-
-/** One of three simple motifs by design number: 0 bridge over water, 1 birch forest, 2 traditional gate. */
-private fun DrawScope.drawMotif(n: Int, c: Offset, r: Float) {
-    fun p(x: Float, y: Float) = Offset(c.x + x * r, c.y + y * r)
-    fun Path.to(x: Float, y: Float) = lineTo(c.x + x * r, c.y + y * r)
-    fun Path.from(x: Float, y: Float) = moveTo(c.x + x * r, c.y + y * r)
-    fun Path.curve(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) =
-        cubicTo(c.x + x1 * r, c.y + y1 * r, c.x + x2 * r, c.y + y2 * r, c.x + x3 * r, c.y + y3 * r)
-    fun wave(y: Float, amp: Float, x0: Float, x1: Float, color: Color, width: Float) {
-        val path = Path().apply { from(x0, y) }
-        val half = 0.3f
-        var x = x0
-        var up = true
-        while (x < x1) {
-            val a = if (up) -amp else amp
-            path.curve(x + half * 0.35f, y + a, x + half * 0.65f, y + a, x + half, y)
-            x += half
-            up = !up
-        }
-        drawPath(path, color, style = Stroke(width * r, cap = StrokeCap.Round))
-    }
-    when (n % 3) {
-        0 -> {
-            drawLine(NAVY, p(-1.1f, -0.1f), p(1.1f, -0.1f), r * 0.075f)
-            val truss = Path().apply {
-                from(-0.8f, -0.1f)
-                to(-0.64f, -0.47f)
-                to(0.64f, -0.47f)
-                to(0.8f, -0.1f)
-                for (i in 0 until 5) {
-                    val x = -0.64f + i * 0.256f
-                    from(x, -0.47f)
-                    to(x + 0.128f, -0.1f)
-                    to(x + 0.256f, -0.47f)
-                }
-            }
-            drawPath(truss, NAVY, style = Stroke(r * 0.055f, join = StrokeJoin.Round))
-            wave(0.2f, 0.07f, -1.1f, 1.1f, CYAN, 0.075f)
-            wave(0.45f, 0.06f, -0.78f, 0.6f, LIGHT_BLUE, 0.075f)
-            wave(0.68f, 0.05f, -0.6f, 0.45f, PALE_BLUE, 0.06f)
-        }
-        1 -> {
-            val bark = Color(0xFFFBFBF6)
-            for ((x, tw, top) in listOf(Triple(-0.6f, 0.15f, -0.72f), Triple(-0.28f, 0.17f, -0.92f), Triple(0.08f, 0.15f, -0.68f), Triple(0.42f, 0.13f, -0.58f))) {
-                val tl = p(x - tw / 2, top)
-                val sz = Size(tw * r, (0.7f - top) * r)
-                drawRect(bark, tl, sz)
-                drawRect(Color(0xFFD3D4CC), tl, sz, style = Stroke(r * 0.015f))
-                for (f in listOf(0.22f, 0.5f)) {
-                    val y = top + (0.6f - top) * f
-                    drawLine(Color(0xFF2E2E2E), p(x - tw * 0.2f, y), p(x + tw * 0.15f, y), r * 0.03f)
-                }
-            }
-            val ground = Path().apply {
-                from(-1.1f, 0.42f)
-                curve(-0.5f, 0.28f, 0.2f, 0.56f, 1.1f, 0.34f)
-                to(1.1f, 1.1f)
-                to(-1.1f, 1.1f)
-                close()
-            }
-            drawPath(ground, TEAL)
-        }
-        else -> {
-            val body = Color(0xFFEAE4DA)
-            drawRect(Color(0xFFD6DEE4), p(-1.1f, 0.12f), Size(2.2f * r, r))
-            drawLine(Color(0xFFC3CDD6), p(-1.1f, 0.13f), p(1.1f, 0.13f), r * 0.03f)
-            drawRect(body, p(-0.46f, -0.3f), Size(0.92f * r, 0.44f * r))
-            drawLine(CYAN, p(-0.38f, 0.02f), p(0.38f, 0.02f), r * 0.035f)
-            val door = Path().apply {
-                from(-0.17f, 0.95f)
-                to(-0.17f, 0.45f)
-                arcTo(Rect(p(-0.17f, 0.28f), p(0.17f, 0.62f)), 180f, 180f, false)
-                to(0.17f, 0.95f)
-                close()
-            }
-            drawPath(door, NAVY)
-            val roof = Path().apply {
-                from(-0.9f, -0.02f)
-                to(-0.5f, -0.25f)
-                to(0.5f, -0.25f)
-                to(0.9f, -0.02f)
-                curve(0.45f, -0.1f, -0.45f, -0.1f, -0.9f, -0.02f)
-                close()
-            }
-            drawPath(roof, NAVY)
-            drawRect(body, p(-0.28f, -0.46f), Size(0.56f * r, 0.22f * r))
-            drawLine(CYAN, p(-0.22f, -0.33f), p(0.22f, -0.33f), r * 0.035f)
-            val top = Path().apply {
-                from(-0.62f, -0.42f)
-                to(-0.2f, -0.66f)
-                to(0.2f, -0.66f)
-                to(0.62f, -0.42f)
-                curve(0.3f, -0.5f, -0.3f, -0.5f, -0.62f, -0.42f)
-                close()
-            }
-            drawPath(top, NAVY)
         }
     }
 }
@@ -754,6 +625,11 @@ fun DrawScope.drawAnniversary(points: List<Pair<Station, Badge>>, label: (Badge)
 
 private data class MedalKey(val badge: Badge, val px: Int, val art: ImageBitmap?)
 
+// Where the disc sits in a whole-medal image, as fractions: center x, center y, and diameter over the image width (measured by tools/cut_medals.py).
+private const val WHOLE_DISC_X = 0.5f
+private const val WHOLE_DISC_Y = 0.5405f
+private const val WHOLE_DISC_W = 0.916f
+
 // ponytail: fixed 48MB budget; a large showcase at 148dp is about 0.2MB per medal.
 private val medalCache = object : LruCache<MedalKey, ImageBitmap>(48 * 1024 * 1024) {
     override fun sizeOf(key: MedalKey, value: ImageBitmap) = value.width * value.height * 4
@@ -765,7 +641,7 @@ private val medalCache = object : LruCache<MedalKey, ImageBitmap>(48 * 1024 * 10
  * The image is larger than [px] by the same margin on every side.
  */
 fun medalImage(badge: Badge, px: Int): ImageBitmap {
-    val key = MedalKey(badge, px, Art.of(badge.design))
+    val key = MedalKey(badge, px, Art.medal(badge))
     // Shadow, gold glow and the ring tab reach 0.3w past the medal box.
     val pad = (px * 0.3f).roundToInt()
     return medalCache.get(key) ?: drawToBitmap(px + 2 * pad, px + 2 * pad) { drawMedal(badge, px.toFloat(), Offset(pad.toFloat(), pad.toFloat())) }

@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SampleTest {
-    private val arts = listOf("41130", "11710", "41500", "47850", "47130", "47770", "26350", "51150", "50110")
+    private val arts = listOf("11710", "41280", "41500", "51730", "47130", "47770", "44150", "52180")
     private val index = StationIndex(
         arts.mapIndexed { i, a -> Station("S$i", "충전소 $a", 37.0 + i * 0.1, 127.0, i) },
         arts.mapIndexed { i, a -> Region(i, a, "지역 $a", a) },

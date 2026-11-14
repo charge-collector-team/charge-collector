@@ -3,7 +3,6 @@ package kr.chargebadge.core
 const val MATCH_RADIUS_M = 50.0
 const val MIN_SOC_GAIN = 3
 const val GOLD_CHANCE = 0.01
-const val DESIGNS_PER_ART = 3
 const val SYNTH_COST = 10
 const val TRADE_EXPIRY_MS = 7L * 24 * 60 * 60 * 1000
 const val TREE_SLOTS = 6

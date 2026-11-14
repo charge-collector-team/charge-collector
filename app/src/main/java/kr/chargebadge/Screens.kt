@@ -107,7 +107,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kr.chargebadge.core.Badge
-import kr.chargebadge.core.DESIGNS_PER_ART
 import kr.chargebadge.core.Design
 import kr.chargebadge.core.Friend
 import kr.chargebadge.core.GOLD_CHANCE
@@ -123,6 +122,7 @@ import kr.chargebadge.core.Tier
 import kr.chargebadge.core.anniversaryCharges
 import kr.chargebadge.core.anniversaryOpen
 import kr.chargebadge.core.anniversaryPoints
+import kr.chargebadge.core.designCount
 import kr.chargebadge.core.designName
 import kr.chargebadge.core.latestAnniversary
 import kr.chargebadge.core.setTreeSlot
@@ -264,7 +264,7 @@ fun CollectionScreen(go: (Screen) -> Unit, detail: Screen.Detail? = null, onClos
                 AnimatedContent(if (regionMode) shown else "showcase", Modifier.weight(1f).fillMaxHeight().case(), { fadeThrough() }, label = "case") { k ->
                     when (k) {
                         is Int -> RegionCase(idx.region(k), go, detail?.badge, null)
-                        null -> Column(Modifier.padding(36.dp)) { Header("시·군·구를 골라 주세요", "도안 3개마다 동·은·금 칸과 수량을 볼 수 있어요") }
+                        null -> Column(Modifier.padding(36.dp)) { Header("시·군·구를 골라 주세요", "도안마다 동·은·금 칸과 수량을 볼 수 있어요") }
                         else -> Showcase(filter, go, detail?.badge) { regionMode = true }
                     }
                 }
@@ -293,8 +293,8 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
     val last = state.charges.lastOrNull()
     val station = here ?: last?.station
     val region = station?.let { idx.region(it.regionIndex) }
-    // The bronze design of this art closest to a silver.
-    val target = region?.let { r -> (0 until DESIGNS_PER_ART).map { Badge(Design(r.artKey, it), Tier.BRONZE) }.maxBy { state.available(it) } }
+    // The bronze design of this art closest to a silver; null where the region has no medal.
+    val target = region?.let { r -> (0 until designCount(r.artKey)).map { Badge(Design(r.artKey, it), Tier.BRONZE) }.maxByOrNull { state.available(it) } }
     val have = target?.let { max(0, state.available(it)) } ?: 0
     val ring = if (compact) 280.dp else 340.dp
     Column(modifier.glass().cornerGlow(accent).padding(40.dp)) {
@@ -313,6 +313,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
         Spacer(Modifier.height(8.dp))
         Sub(
             when {
+                here != null && target == null -> "${here.name} · 아직 배지가 없는 지역"
                 here != null -> "${here.name} · 등재 충전소"
                 last != null -> "${last.station.name} · ${last.date}"
                 else -> "공공 충전소에서 충전율이 ${MIN_SOC_GAIN}%p 오르면 배지를 받아요"
@@ -343,7 +344,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
         Spacer(Modifier.height(28.dp))
         when {
             Game.charging && last != null -> Btn("충전 중 화면 보기", Modifier.fillMaxWidth().height(84.dp)) { go(Screen.Charging) }
-            region != null -> Btn("이 지역 배지 보기", Modifier.fillMaxWidth().height(84.dp)) { openRegion(region.index) }
+            region != null && target != null -> Btn("이 지역 배지 보기", Modifier.fillMaxWidth().height(84.dp)) { openRegion(region.index) }
             else -> Btn("시·군·구별로 둘러보기", Modifier.fillMaxWidth().height(84.dp)) { openRegion(null) }
         }
     }
@@ -376,7 +377,7 @@ private fun Showcase(
     }.sortedWith(compareByDescending<Badge> { it.tier }.thenBy { artOrder[it.design.artKey] }.thenBy { it.design.number })
     val ownedDesigns = owned.map { it.design }.toSet()
     val missing = if (filter.value == "전체") {
-        arts.sortedBy { artOrder[it] }.flatMap { a -> (0 until DESIGNS_PER_ART).map { Design(a, it) } }.filter { it !in ownedDesigns }
+        arts.sortedBy { artOrder[it] }.flatMap { a -> (0 until designCount(a)).map { Design(a, it) } }.filter { it !in ownedDesigns }
     } else emptyList()
     LazyVerticalGrid(
         GridCells.Adaptive(180.dp),
@@ -428,11 +429,12 @@ private fun Showcase(
 private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListState, onSelect: (Int) -> Unit, onExit: () -> Unit) {
     val idx = Game.index
     val state = Game.state
+    val regions = idx.regions.filter { designCount(it.artKey) > 0 }
     Column(modifier) {
         Column(Modifier.padding(start = 32.dp, end = 32.dp, top = 32.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Eyebrow("시·군·구 선택")
-            Text("전체 ${idx.regions.size}곳", fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
-            Sub("방문 ${idx.regions.count { Game.engine.visited(state, it.index) }}곳 · 배지가 있는 칸 ${idx.regions.count { Game.engine.cellTier(state, idx, it.index) != null }}곳")
+            Text("배지 지역 ${regions.size}곳", fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+            Sub("방문 ${regions.count { Game.engine.visited(state, it.index) }}곳 · 배지가 있는 칸 ${regions.count { Game.engine.cellTier(state, idx, it.index) != null }}곳")
         }
         LazyColumn(
             Modifier.weight(1f),
@@ -441,7 +443,7 @@ private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListSt
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // Regions with badges or visits first, each group in region order.
-            items(idx.regions.sortedBy { if (hasBadgeOrVisit(state, idx, it)) 0 else 1 }, key = { it.index }) { r ->
+            items(regions.sortedBy { if (hasBadgeOrVisit(state, idx, it)) 0 else 1 }, key = { it.index }) { r ->
                 val tier = Game.engine.cellTier(state, idx, r.index)
                 val visited = Game.engine.visited(state, r.index)
                 RegionRow(regionLabel(r), listOfNotNull(if (visited) "방문" else null, tier?.let(::tierLabel)).joinToString(" · "), r.index == selected) { onSelect(r.index) }
@@ -470,7 +472,7 @@ private fun RegionRow(label: String, trailing: String, selected: Boolean, onClic
     }
 }
 
-/** One region: 3 designs x 동·은·금 slots, then the stations charged there. */
+/** One region: its designs x 동·은·금 slots, then the stations charged there. */
 @Composable
 private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badge?, onBack: (() -> Unit)?) {
     val state = Game.state
@@ -485,7 +487,7 @@ private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badg
                 rep?.let { "지역 대표 ${designName(it.design)} ${tierLabel(it.tier)}" },
             ).joinToString(" · "),
         )
-        for (n in 0 until DESIGNS_PER_ART) {
+        for (n in 0 until designCount(region.artKey)) {
             val design = Design(region.artKey, n)
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Heading(designName(design))

@@ -4,19 +4,24 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.random.Random
 
-/** The sample year's trip: art key and days after the first-met day. */
+/**
+ * The sample year's trip: art key, days after the first-met day, design. Designs are the ones with drawn medal art,
+ * so the sample shows them; 송파 is visited ten times so a silver is made by the real rule.
+ */
 private val SAMPLE_TRIP = listOf(
-    "11710" to 12, "41500" to 41, "47850" to 95, "47130" to 96, "47770" to 97,
-    "26350" to 152, "51150" to 223, "50110" to 284,
-)
+    Triple("41280", 25, 0), Triple("41500", 41, 0), Triple("51730", 63, 0), Triple("47130", 96, 0),
+    Triple("47770", 97, 0), Triple("44150", 118, 0), Triple("52180", 140, 0), Triple("44150", 198, 1),
+    Triple("44150", 268, 2),
+) + (0 until SYNTH_COST).map { Triple("11710", 12 + it * 30, 0) }
 
 /** The trip stop whose charge is the one gold. */
 private const val SAMPLE_GOLD_ART = "47130"
 
 /**
  * A year of charging for showing the app without real history: first met a year and two weeks before [today],
- * charges at [home] (else a 성남시 station) every 9 days until one design can become a silver, a trip across the
- * country with one gold, and in December a full tree. Badges come from the real engine except the one gold.
+ * charges at [home] every 9 days until one design can become a silver (only if home gives badges), a trip through
+ * the regions with medals and one gold, silvers synthesized by the engine, and in December a full tree. Home badges
+ * come from the real engine; trip stops get the listed design so each drawn medal shows.
  */
 fun sampleState(index: StationIndex, today: LocalDate, home: Station? = null, random: Random = Random(7)): GameState {
     val engine = BadgeEngine(random)
@@ -24,40 +29,41 @@ fun sampleState(index: StationIndex, today: LocalDate, home: Station? = null, ra
     val firstMet = today.minusYears(1).minusDays(14)
     val stationOf = { art: String -> index.stations.firstOrNull { index.region(it.regionIndex).artKey == art } }
     val millis = { day: LocalDate -> day.atTime(14, 0).atZone(zone).toInstant().toEpochMilli() }
-    val homeStation = home ?: stationOf("41130")
+    val homeStation = home?.takeIf { designCount(index.region(it.regionIndex).artKey) > 0 }
     var s = GameState(firstMet = firstMet)
 
-    fun charge(st: Station, day: LocalDate) {
-        if (index.region(st.regionIndex).artKey != SAMPLE_GOLD_ART) {
+    fun charge(st: Station, day: LocalDate, design: Int?) {
+        if (design == null) {
             s = engine.onValidCharge(s, st, day, millis(day), index).first
             return
         }
-        val gold = Badge(Design(SAMPLE_GOLD_ART, 0), Tier.GOLD)
+        val art = index.region(st.regionIndex).artKey
+        val badge = Badge(Design(art, design), if (art == SAMPLE_GOLD_ART) Tier.GOLD else Tier.BRONZE)
         s = s.copy(
-            owned = s.owned.add(gold, 1),
-            acquisitions = s.acquisitions + Acquisition(gold, Source.CHARGE, millis(day)),
-            charges = s.charges + ChargeRecord(st, day, millis(day), gold),
+            owned = s.owned.add(badge, 1),
+            acquisitions = s.acquisitions + Acquisition(badge, Source.CHARGE, millis(day)),
+            charges = s.charges + ChargeRecord(st, day, millis(day), badge),
         )
     }
 
     fun homeReady(): Boolean {
         val art = homeStation?.let { index.region(it.regionIndex).artKey } ?: return true
-        return (0 until DESIGNS_PER_ART).any { s.count(Badge(Design(art, it), Tier.BRONZE)) >= SYNTH_COST }
+        return (0 until designCount(art)).any { s.count(Badge(Design(art, it), Tier.BRONZE)) >= SYNTH_COST }
     }
 
     // Charges go in by date, so the last record is the latest one, as in real use.
-    val trip = SAMPLE_TRIP.mapNotNull { (art, d) -> stationOf(art)?.let { firstMet.plusDays(d.toLong()) to it } }.sortedBy { it.first }
+    val trip = SAMPLE_TRIP.mapNotNull { (art, d, design) -> stationOf(art)?.let { Triple(firstMet.plusDays(d.toLong()), it, design) } }.sortedBy { it.first }
     var next = 0
     var day = 3L
     while (day < 360) {
         val date = firstMet.plusDays(day)
-        while (next < trip.size && trip[next].first <= date) charge(trip[next].second, trip[next++].first)
-        if (homeStation != null && !homeReady()) charge(homeStation, date)
+        while (next < trip.size && trip[next].first <= date) trip[next++].let { (d, st, design) -> charge(st, d, design) }
+        if (homeStation != null && !homeReady()) charge(homeStation, date, null)
         day += 9
     }
-    trip.drop(next).forEach { (d, st) -> charge(st, d) }
+    trip.drop(next).forEach { (d, st, design) -> charge(st, d, design) }
 
-    s.owned.keys.firstOrNull { it.tier == Tier.BRONZE && engine.synthesizable(s, it.design) }?.let {
+    s.owned.keys.filter { it.tier == Tier.BRONZE && engine.synthesizable(s, it.design) }.forEach {
         s = engine.synthesize(s, it.design, millis(firstMet.plusDays(300)))
     }
 

@@ -59,7 +59,7 @@ class CalendarAndJsonTest {
 
     @Test
     fun designNames() {
-        assertEquals("꿀참외", designName(Design("47850", 2)))
+        assertEquals("고마곰", designName(Design("44150", 2)))
         assertEquals("잠실 롯데타워", designName(Design("11710", 0)))
         assertEquals("도안 2", designName(Design("11710", 1)))
         assertEquals("도안 1", designName(Design("11110", 0)))
