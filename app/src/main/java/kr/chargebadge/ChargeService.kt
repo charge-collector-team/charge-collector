@@ -98,7 +98,7 @@ class ChargeService : Service() {
         override fun onChanged(data: LocationData?) {
             // Fallback for starting a live session only; on the emulator fused often reports a default US location.
             if (data != null) main.post {
-                if (!Game.naviLocation) {
+                if (!Game.naviLocation && !Game.locationPinned) {
                     Game.lat = data.latitude
                     Game.lng = data.longitude
                 }
@@ -170,8 +170,10 @@ class ChargeService : Service() {
 
     private fun onNaviLocation(lat: Double, lng: Double) {
         Game.naviLocation = true
-        Game.lat = lat
-        Game.lng = lng
+        if (!Game.locationPinned) {
+            Game.lat = lat
+            Game.lng = lng
+        }
         judgeBoot()
         saveSnapshot()
     }

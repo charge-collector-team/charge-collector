@@ -20,6 +20,8 @@ class SampleTest {
         assertEquals(arts.size, anniversaryPoints(s, today).size)
         assertTrue(s.owned.keys.any { it.tier == Tier.SILVER })
         assertTrue(s.owned.keys.any { it.tier == Tier.GOLD })
+        // 공주 shows one of its three designs as not got yet.
+        assertEquals(setOf(0, 1), s.owned.keys.filter { it.design.artKey == "44150" }.map { it.design.number }.toSet())
         assertEquals(TREE_SLOTS, treeSlots(s, 2026).count { it != null })
         assertEquals(s.charges.sortedBy { it.timeMillis }, s.charges)
         assertTrue(s.charges.all { it.date < today })

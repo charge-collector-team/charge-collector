@@ -34,6 +34,7 @@ import kotlin.random.Random
 const val TAG = "CHARGEBADGE"
 const val EXTRA_OPEN = "open"
 const val EXTRA_SAMPLE = "sample"
+const val EXTRA_HERE = "here"
 
 class ChargeApp : Application() {
     override fun onCreate() {
@@ -67,6 +68,10 @@ object Game {
     var lng by mutableStateOf<Double?>(null)
     var naviLocation = false
 
+    /** Set only by [pinHere]; while true, ChargeService leaves [lat]/[lng] alone. */
+    var locationPinned = false
+        private set
+
     private fun regionLines(lines: (Sequence<String>) -> StationIndex) =
         app.assets.open("regions.csv").bufferedReader().useLines(lines)
 
@@ -75,6 +80,7 @@ object Game {
         file = AtomicFile(File(app.filesDir, "state.json"))
         state = load()
         shownDay = prefs().getString("day", null)?.let(LocalDate::parse)
+        prefs().getString("here", null)?.let(::pinHere)
         // The day the app was installed is the day the driver met the car.
         if (state.firstMet == null) update { it.copy(firstMet = installDay()) }
         index = regionLines { StationCsv.load(emptySequence(), it) }
@@ -153,13 +159,29 @@ object Game {
         thread(name = "sample") {
             stationsReady.await()
             Handler(app.mainLooper).post {
-                val la = lat
-                val ln = lng
-                val home = if (la != null && ln != null) index.nearest(la, ln) else null
-                update { sampleState(index, day, home) }
-                Log.i(TAG, "sample loaded day=$day charges=${state.charges.size} home=${home?.id}")
+                update { sampleState(index, day) }
+                Log.i(TAG, "sample loaded day=$day charges=${state.charges.size}")
             }
         }
+    }
+
+    /**
+     * For showing the app (adb only): "lat,lng" becomes the car's position, kept across restarts, because the
+     * emulator's navigation stays at one fixed place; "off" goes back to the navigation's position.
+     */
+    fun pinHere(arg: String) {
+        if (arg == "off") {
+            locationPinned = false
+            prefs().edit().remove("here").apply()
+            return
+        }
+        val p = arg.split(',').mapNotNull { it.trim().toDoubleOrNull() }
+        if (p.size != 2) return Log.w(TAG, "here: bad lat,lng $arg").let {}
+        locationPinned = true
+        lat = p[0]
+        lng = p[1]
+        prefs().edit().putString("here", arg).apply()
+        Log.i(TAG, "here pinned ${p[0]},${p[1]}")
     }
 
     private fun changeShownDay(day: LocalDate?) {

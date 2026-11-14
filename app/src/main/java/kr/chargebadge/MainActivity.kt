@@ -144,7 +144,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun open(intent: Intent?) {
-        // ponytail: demo hook any app can send; remove before a real release.
+        // ponytail: demo hooks any app can send; remove before a real release.
+        intent?.getStringExtra(EXTRA_HERE)?.let(Game::pinHere)
         intent?.getStringExtra(EXTRA_SAMPLE)?.let {
             Game.showSample(it)
             stack.clear()
@@ -566,25 +567,32 @@ fun TierTag(t: Tier) {
 
 /**
  * Medal disc [width] wide; its ring tab is drawn above the box, so [loopSpace] reserves that room.
- * [owned] false draws the empty "?" slot.
+ * [owned] false draws the medal in grey: a badge not got yet.
  */
 @Composable
 fun Medal(badge: Badge, width: Dp, owned: Boolean = true, modifier: Modifier = Modifier, loopSpace: Boolean = true) {
     val m = if (loopSpace) modifier.padding(top = width * (MEDAL_H - 1)) else modifier
-    if (!owned) return Box(m.size(width), contentAlignment = Alignment.Center) { Unknown(width * 0.82f) }
-    Canvas(m.size(width), contentDescription = badgeName(Game.index, badge)) { drawMedalCached(badge, size.width) }
+    Canvas(m.size(width), contentDescription = badgeName(Game.index, badge)) { drawMedalCached(badge, size.width, greyed = !owned) }
 }
 
-/** Dashed circle with a question mark: a badge not collected yet. */
+/** "×3" on a medal's bottom-left. */
 @Composable
-fun Unknown(size: Dp) {
+fun CountChip(count: Int, modifier: Modifier = Modifier) = Text(
+    "×$count",
+    modifier.clip(CircleShape).background(Color(0xFF0F1A30)).padding(3.dp)
+        .clip(CircleShape).background(NAVY).padding(horizontal = 10.dp, vertical = 1.dp),
+    fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = Color.White,
+)
+
+/** Dashed empty circle: a slot nothing has been picked for yet. */
+@Composable
+fun EmptySlot(size: Dp) {
     Box(
         Modifier.size(size).drawBehind {
             val w = 3.dp.toPx()
             drawCircle(Color(0x1FFFFFFF), this.size.minDimension / 2 - w, style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(9.dp.toPx(), 7.dp.toPx()))))
         },
-        contentAlignment = Alignment.Center,
-    ) { Text("?", fontSize = (size.value * 0.3f).sp, color = Color(0x40FFFFFF), fontWeight = FontWeight.Medium) }
+    )
 }
 
 /** Recessed round slot a medal sits in. */
@@ -629,13 +637,7 @@ fun BadgeSlot(
     ) {
         Box {
             Well(well) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
-            if (owned && count > 0) Text(
-                "×$count",
-                Modifier.align(Alignment.BottomStart).offset(x = 4.dp, y = (-4).dp)
-                    .clip(CircleShape).background(Color(0xFF0F1A30)).padding(3.dp)
-                    .clip(CircleShape).background(NAVY).padding(horizontal = 10.dp, vertical = 1.dp),
-                fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = Color.White,
-            )
+            if (owned && count > 0) CountChip(count, Modifier.align(Alignment.BottomStart).offset(x = 4.dp, y = (-4).dp))
         }
         Spacer(Modifier.height(16.dp))
         // Slot labels are narrow: "잠실 롯데타워" shows as "롯데타워" (as in the mock), but "도안 2" stays whole.

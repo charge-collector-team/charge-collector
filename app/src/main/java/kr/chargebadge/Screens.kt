@@ -296,7 +296,7 @@ fun CollectionScreen(go: (Screen) -> Unit, detail: Screen.Detail? = null, onClos
     }
 }
 
-/** Where the car is now (else the last charge): region, progress to silver, totals and the next step. */
+/** Where the car is now (else the last charge): region, one of its badges (grey if not got yet), totals and the next step. */
 @Composable
 private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) -> Unit, compact: Boolean = false) {
     val idx = Game.index
@@ -308,9 +308,13 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
     val last = state.charges.lastOrNull()
     val station = here ?: last?.station
     val region = station?.let { idx.region(it.regionIndex) }
-    // The bronze design of this art closest to a silver; null where the region has no medal.
-    val target = region?.let { r -> (0 until designCount(r.artKey)).map { Badge(Design(r.artKey, it), Tier.BRONZE) }.maxByOrNull { state.available(it) } }
-    val have = target?.let { max(0, state.available(it)) } ?: 0
+    // Each design of this region: the best tier owned, else its bronze (drawn grey). Empty where the region has no medal.
+    val designs = region?.let { r ->
+        (0 until designCount(r.artKey)).map { n ->
+            val d = Design(r.artKey, n)
+            state.owned.keys.filter { it.design == d }.maxByOrNull { it.tier } ?: Badge(d, Tier.BRONZE)
+        }
+    }.orEmpty()
     Column(modifier.glass().cornerGlow(accent).padding(40.dp)) {
         Eyebrow(
             when {
@@ -327,21 +331,36 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
         Spacer(Modifier.height(8.dp))
         Sub(
             when {
-                here != null && target == null && wolfDue(state, region!!.artKey, Game.today()) -> "충전소: ${here.name}\n지금 충전하면 한정 배지 늑구를 받아요"
-                here != null && target == null -> "충전소: ${here.name}\n아직 배지가 없는 지역이에요"
+                here != null && designs.isEmpty() && wolfDue(state, region!!.artKey, Game.today()) -> "충전소: ${here.name}\n지금 충전하면 한정 배지 늑구를 받아요"
+                here != null && designs.isEmpty() -> "충전소: ${here.name}\n아직 배지가 없는 지역이에요"
                 here != null -> "충전소: ${here.name}\n여기서 충전하면 이 지역 배지를 받아요"
                 last != null -> "충전소: ${last.station.name}\n${last.date} 충전"
                 else -> "공공 충전소에서 배터리를 ${MIN_SOC_GAIN}% 이상 충전하면 배지를 받아요"
             },
         )
-        // Side panel: the ring takes the height left over (up to 340dp), so the card fits at any UI scale.
+        // As large as the height left over allows, so the card fits at any UI scale.
         BoxWithConstraints(
-            Modifier.fillMaxWidth().then(if (compact) Modifier.height(336.dp) else Modifier.weight(1f)).padding(vertical = if (compact) 28.dp else 24.dp),
+            Modifier.fillMaxWidth().then(if (compact) Modifier.height(336.dp) else Modifier.weight(1f)).padding(vertical = if (compact) 28.dp else 16.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val ring = minOf(maxHeight, 340.dp)
-            ProgressRing(ring, have / SYNTH_COST.toFloat()) {
-                if (target != null && state.count(target) > 0) Medal(target, ring * 0.62f) else Unknown(ring * 0.6f)
+            // One medal: the region's 대표 badge, else the one got here most recently, else its first design in grey.
+            val shown = region?.let { state.representatives[it.index] }
+                ?: designs.filter { state.count(it) > 0 }.maxByOrNull { b -> state.acquisitions.filter { it.badge.design == b.design }.maxOf { it.timeMillis } }
+                ?: designs.firstOrNull()
+            if (shown != null) {
+                val n = state.count(shown)
+                // Labels beside the medal, so it can use the whole height (its ring tab rises MEDAL_H above the disc).
+                val w = minOf(maxHeight / MEDAL_H, maxWidth * 0.5f, 220.dp)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Box {
+                        Medal(shown, w, owned = n > 0)
+                        if (n > 0) CountChip(n, Modifier.align(Alignment.BottomStart))
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(designName(shown.design), fontSize = 34.sp, fontWeight = FontWeight.Bold, color = if (n > 0) TXT else SUB, maxLines = 1)
+                        Text(if (n > 0) "${tierLabel(shown.tier)} 배지" else "아직 없음", fontSize = 24.sp, color = SUB, maxLines = 1)
+                    }
+                }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -361,7 +380,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
         Spacer(Modifier.height(28.dp))
         when {
             Game.charging && last != null -> Btn("충전 중 화면 보기", Modifier.fillMaxWidth().height(84.dp)) { go(Screen.Charging) }
-            region != null && target != null -> Btn("이 지역 배지 보기", Modifier.fillMaxWidth().height(84.dp)) { openRegion(region.index) }
+            region != null && designs.isNotEmpty() -> Btn("이 지역 배지 보기", Modifier.fillMaxWidth().height(84.dp)) { openRegion(region.index) }
             else -> Btn("시·군·구별로 둘러보기", Modifier.fillMaxWidth().height(84.dp)) { openRegion(null) }
         }
     }
@@ -1034,7 +1053,7 @@ private fun SwapSlot(b: Badge?, title: String, sub: String, modifier: Modifier, 
                     b,
                     transitionSpec = { (scaleIn(spring(dampingRatio = 0.55f, stiffness = 320f), initialScale = 0.5f) + fadeIn(tween(160))) togetherWith (scaleOut(tween(140), targetScale = 0.8f) + fadeOut(tween(140))) },
                     label = "slot",
-                ) { x -> if (x == null) Unknown(well * 0.72f) else Medal(x, well * 0.86f, loopSpace = false) }
+                ) { x -> if (x == null) EmptySlot(well * 0.72f) else Medal(x, well * 0.86f, loopSpace = false) }
             }
         }
         if (b != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

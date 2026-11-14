@@ -18,6 +18,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
@@ -683,12 +685,14 @@ fun medalImage(badge: Badge, px: Int): ImageBitmap {
         .asImageBitmap().also { medalCache.put(key, it) }
 }
 
-fun DrawScope.drawMedalCached(badge: Badge, w: Float) {
+fun DrawScope.drawMedalCached(badge: Badge, w: Float, greyed: Boolean = false) {
     val px = w.roundToInt().coerceAtLeast(1)
     val img = medalImage(badge, px)
     val pad = (img.width - px) / 2f
-    drawImage(img, Offset(-pad, -pad))
+    if (greyed) drawImage(img, Offset(-pad, -pad), alpha = 0.45f, colorFilter = GREY) else drawImage(img, Offset(-pad, -pad))
 }
+
+private val GREY = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
 
 /** Renders [draw] into a bitmap of the given size, so saved images match what the screen shows. */
 fun drawToBitmap(width: Int, height: Int, draw: DrawScope.() -> Unit): Bitmap {
