@@ -539,9 +539,10 @@ fun tierLabel(t: Tier) = when (t) {
     Tier.BRONZE -> "동"
     Tier.SILVER -> "은"
     Tier.GOLD -> "금"
+    Tier.LIMITED -> "한정"
 }
 
-fun tierColorName(t: Tier) = tierLabel(t) + "색"
+fun tierColorName(t: Tier) = if (t == Tier.LIMITED) tierLabel(t) else tierLabel(t) + "색"
 
 /** 동/은/금 chip: the tier is always spelled out, never shown by color alone. */
 @Composable
@@ -550,6 +551,7 @@ fun TierTag(t: Tier) {
         Tier.BRONZE -> Color(0xFF5A3A26) to Color(0xFFF2C29F)
         Tier.SILVER -> Color(0xFF3A4654) to Color(0xFFE8EEF4)
         Tier.GOLD -> Color(0xFF5C4614) to Color(0xFFFFE08A)
+        Tier.LIMITED -> Color(0xFF1E3A66) to Color(0xFFBFDBFF)
     }
     Text(tierLabel(t), Modifier.clip(CircleShape).background(bg).padding(horizontal = 12.dp, vertical = 1.dp), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = fg)
 }

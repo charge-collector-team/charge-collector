@@ -2,7 +2,8 @@ package kr.chargebadge.core
 
 import java.time.LocalDate
 
-enum class Tier { BRONZE, SILVER, GOLD }
+/** LIMITED (한정) is its own category, not a step above gold: only limited badges such as [WOLF] have it. */
+enum class Tier { BRONZE, SILVER, GOLD, LIMITED }
 data class Design(val artKey: String, val number: Int)
 data class Badge(val design: Design, val tier: Tier)
 
@@ -23,7 +24,20 @@ val MEDAL_DESIGNS: Map<String, List<String>> = mapOf(
 
 fun designCount(artKey: String): Int = MEDAL_DESIGNS[artKey]?.size ?: 0
 
-fun designName(design: Design): String = MEDAL_DESIGNS[design.artKey]?.getOrNull(design.number) ?: "도안 ${design.number + 1}"
+/**
+ * 늑구, the limited badge: a single 한정 badge (no 동·은·금), given once for the first charge in any 대전 gu during
+ * [WOLF_DAYS]. It sits in the 대전 중구 cell (where 오월드 is); 중구 has no entry in [MEDAL_DESIGNS], so ordinary charges
+ * never give it.
+ */
+val WOLF = Badge(Design("30140", 0), Tier.LIMITED)
+val WOLF_DAYS: ClosedRange<LocalDate> = LocalDate.of(2026, 12, 1)..LocalDate.of(2026, 12, 31)
+
+/** 대전's gu all have art keys starting with its province code 30. */
+fun wolfDue(state: GameState, artKey: String, date: LocalDate): Boolean =
+    artKey.startsWith("30") && date in WOLF_DAYS && state.acquisitions.none { it.badge == WOLF }
+
+fun designName(design: Design): String =
+    if (design == WOLF.design) "늑구" else MEDAL_DESIGNS[design.artKey]?.getOrNull(design.number) ?: "도안 ${design.number + 1}"
 
 enum class Source { CHARGE, TRADE, SYNTHESIS }
 data class Acquisition(val badge: Badge, val source: Source, val timeMillis: Long, val friendId: String? = null)

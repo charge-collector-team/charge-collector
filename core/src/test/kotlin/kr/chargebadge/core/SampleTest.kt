@@ -26,6 +26,19 @@ class SampleTest {
     }
 
     @Test
+    fun decemberSampleHasWolfOnTheTree() {
+        val withDaejeon = StationIndex(
+            index.stations + Station("SD", "대전 충전소", 36.35, 127.38, arts.size),
+            index.regions + Region(arts.size, "30170", "대전광역시 서구", "30170"),
+        )
+        val s = sampleState(withDaejeon, LocalDate.of(2026, 12, 3))
+        assertEquals(1, s.count(WOLF))
+        assertEquals(WOLF, s.charges.last().badge)
+        assertTrue(WOLF in treeSlots(s, 2026))
+        assertEquals(0, sampleState(withDaejeon, LocalDate.of(2026, 11, 14)).count(WOLF))
+    }
+
+    @Test
     fun noTreeOutsideDecember() {
         assertTrue(sampleState(index, LocalDate.of(2026, 11, 14)).trees.isEmpty())
     }

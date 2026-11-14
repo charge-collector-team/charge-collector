@@ -7,7 +7,7 @@ sealed interface ChargeOutcome {
     data class Awarded(val badge: Badge) : ChargeOutcome
     data object DailyLimit : ChargeOutcome
 
-    /** The region has no medal design, so the charge gives nothing and is not recorded. */
+    /** The region has no medal design (and 늑구 is not due), so the charge gives nothing and is not recorded. */
     data object NoBadge : ChargeOutcome
 }
 
@@ -22,10 +22,12 @@ class BadgeEngine(private val random: Random) {
     ): Pair<GameState, ChargeOutcome> {
         if (state.charges.any { it.date == date && it.station.id == station.id }) return state to ChargeOutcome.DailyLimit
         val art = index.region(station.regionIndex).artKey
-        val designs = designCount(art)
-        if (designs == 0) return state to ChargeOutcome.NoBadge
-        val tier = if (random.nextDouble() < GOLD_CHANCE) Tier.GOLD else Tier.BRONZE
-        val badge = Badge(Design(art, random.nextInt(designs)), tier)
+        val badge = if (wolfDue(state, art, date)) WOLF else {
+            val designs = designCount(art)
+            if (designs == 0) return state to ChargeOutcome.NoBadge
+            val tier = if (random.nextDouble() < GOLD_CHANCE) Tier.GOLD else Tier.BRONZE
+            Badge(Design(art, random.nextInt(designs)), tier)
+        }
         val next = state.copy(
             owned = state.owned.add(badge, 1),
             acquisitions = state.acquisitions + Acquisition(badge, Source.CHARGE, nowMillis),

@@ -73,7 +73,7 @@ object Art {
         val assets = context.applicationContext.assets
         thread(name = "art") {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
-            val tiers = mapOf("b" to Tier.BRONZE, "s" to Tier.SILVER, "g" to Tier.GOLD)
+            val tiers = mapOf("b" to Tier.BRONZE, "s" to Tier.SILVER, "g" to Tier.GOLD, "l" to Tier.LIMITED)
             val whole = assets.list("medals").orEmpty().mapNotNull { name ->
                 val (key, n, t) = name.substringBeforeLast('.').split('_').takeIf { it.size == 3 } ?: return@mapNotNull null
                 val bmp = assets.open("medals/$name").use(BitmapFactory::decodeStream) ?: return@mapNotNull null
@@ -87,7 +87,7 @@ object Art {
 
 /**
  * Medal disc [w] wide with its box's top-left at [at]; the ring tab is drawn above the box.
- * [bare] skips drop shadow and gold glow (for medals inside glass ornaments).
+ * [bare] skips drop shadow and glow (for medals inside glass ornaments).
  */
 fun DrawScope.drawMedal(badge: Badge, w: Float, at: Offset = Offset.Zero, bare: Boolean = false) {
     val r = w / 2
@@ -96,9 +96,12 @@ fun DrawScope.drawMedal(badge: Badge, w: Float, at: Offset = Offset.Zero, bare: 
     if (!bare) {
         val sc = Offset(c.x, c.y + r * 0.19f)
         drawCircle(Brush.radialGradient(0f to Color(0x8C000000), 0.7f to Color(0x8C000000), 1f to Color.Transparent, center = sc, radius = r * 1.4f), r * 1.4f, sc)
-        if (badge.tier == Tier.GOLD) {
-            drawCircle(Brush.radialGradient(0.62f to Color(0x8CE8C66A), 1f to Color.Transparent, center = c, radius = r * 1.5f), r * 1.5f, c)
+        val glow = when (badge.tier) {
+            Tier.GOLD -> Color(0x8CE8C66A)
+            Tier.LIMITED -> Color(0x8C8CBCF0)
+            else -> null
         }
+        if (glow != null) drawCircle(Brush.radialGradient(0.62f to glow, 1f to Color.Transparent, center = c, radius = r * 1.5f), r * 1.5f, c)
     }
     // Still loading: an empty disc.
     if (whole == null) return drawCircle(Color(0x14FFFFFF), r, c)

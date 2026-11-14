@@ -67,6 +67,10 @@ fun sampleState(index: StationIndex, today: LocalDate, home: Station? = null, ra
         s = engine.synthesize(s, it.design, millis(firstMet.plusDays(300)))
     }
 
+    // 늑구 on the first day of its period, when that falls before [today]: a 대전 charge through the real rule.
+    val daejeon = index.stations.firstOrNull { index.region(it.regionIndex).artKey.startsWith("30") }
+    if (daejeon != null && WOLF_DAYS.start < today && WOLF_DAYS.start > firstMet) charge(daejeon, WOLF_DAYS.start, null)
+
     if (treeEditable(today)) {
         val picks = s.owned.keys.sortedWith(compareByDescending<Badge> { it.tier }.thenBy { it.design.artKey }).distinctBy { it.design.artKey }.take(TREE_SLOTS)
         picks.forEachIndexed { i, b -> s = setTreeSlot(s, today, i, b) }

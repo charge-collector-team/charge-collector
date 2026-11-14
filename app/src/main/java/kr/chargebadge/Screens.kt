@@ -119,6 +119,9 @@ import kr.chargebadge.core.StationIndex
 import kr.chargebadge.core.TRADE_EXPIRY_MS
 import kr.chargebadge.core.TREE_SLOTS
 import kr.chargebadge.core.Tier
+import kr.chargebadge.core.WOLF
+import kr.chargebadge.core.WOLF_DAYS
+import kr.chargebadge.core.wolfDue
 import kr.chargebadge.core.anniversaryCharges
 import kr.chargebadge.core.anniversaryOpen
 import kr.chargebadge.core.anniversaryPoints
@@ -142,8 +145,12 @@ import kotlin.math.sin
 private val GAP = Arrangement.spacedBy(24.dp)
 private val PAGE = PaddingValues(horizontal = 48.dp, vertical = 32.dp)
 
+/** How 늑구 is earned, for the screens that would otherwise show progress to silver. */
+private val WOLF_RULE = "${WOLF_DAYS.start.year}년 ${WOLF_DAYS.start.monthValue}월 한 달, 대전 어디서든 충전하면 한 번만 받는 한정 배지예요"
+
 /** Name of the art (city for general-gu, which share one art key). */
 fun artName(idx: StationIndex, artKey: String): String {
+    if (artKey == WOLF.design.artKey) return "대전" // 늑구 stands for all of 대전, not just 중구
     val regions = idx.regionsOfArt(artKey)
     val name = regions.firstOrNull()?.name ?: artKey
     return if (regions.size > 1) name.substringBeforeLast(' ') else name
@@ -192,6 +199,7 @@ private fun tierGlow(t: Tier) = when (t) {
     Tier.BRONZE -> Color(0xFFE3A77F)
     Tier.SILVER -> Color(0xFFDDE6F0)
     Tier.GOLD -> Color(0xFFFFE08A)
+    Tier.LIMITED -> Color(0xFF9CC8FF)
 }
 
 /** "은까지 같은 도안 동 7 / 10" with the count in the accent color. */
@@ -313,6 +321,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
         Spacer(Modifier.height(8.dp))
         Sub(
             when {
+                here != null && target == null && wolfDue(state, region!!.artKey, Game.today()) -> "${here.name} · 지금 충전하면 한정 늑구 배지"
                 here != null && target == null -> "${here.name} · 아직 배지가 없는 지역"
                 here != null -> "${here.name} · 등재 충전소"
                 last != null -> "${last.station.name} · ${last.date}"
@@ -371,6 +380,7 @@ private fun Showcase(
             "동" -> it.tier == Tier.BRONZE
             "은" -> it.tier == Tier.SILVER
             "금" -> it.tier == Tier.GOLD
+            "한정" -> it.tier == Tier.LIMITED
             "교환" -> it in traded
             else -> true
         }
@@ -398,7 +408,7 @@ private fun Showcase(
                     )
                 }
                 FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
-                    listOf("전체", "동", "은", "금", "교환").forEach { Pill(it, filter.value == it) { filter.value = it } }
+                    listOf("전체", "동", "은", "금", "한정", "교환").forEach { Pill(it, filter.value == it) { filter.value = it } }
                     Pill("시·군·구", false, onClick = onRegions)
                 }
             }
@@ -492,7 +502,7 @@ private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badg
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Heading(designName(design))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (tier in Tier.entries) {
+                    for (tier in listOf(Tier.BRONZE, Tier.SILVER, Tier.GOLD)) {
                         val b = Badge(design, tier)
                         BadgeSlot(b, state.count(b), well = 132.dp, selected = b == selectedBadge, lockedTier = true) { go(Screen.Detail(region.index, b)) }
                     }
@@ -575,6 +585,7 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
                     Tier.BRONZE -> "이 지역 등재 충전소에서 충전율 +${MIN_SOC_GAIN}%p 이상 충전 (${pct(1 - GOLD_CHANCE)})"
                     Tier.SILVER -> "같은 도안 동 ${SYNTH_COST}개를 [합성하기]"
                     Tier.GOLD -> "이 지역 등재 충전소에서 충전할 때 ${pct(GOLD_CHANCE)} 확률"
+                    Tier.LIMITED -> WOLF_RULE
                 },
             )
             Info("획득 경로") {
@@ -721,6 +732,7 @@ fun AcquiredScreen(onDone: () -> Unit) {
         Box(Modifier.enter(700)) {
             AccentChip(
                 when {
+                    b == WOLF -> "12월 대전 한정 배지예요"
                     b.tier == Tier.GOLD -> "${pct(GOLD_CHANCE)} 확률로 나온 금 배지예요"
                     left > 0 -> "은까지 같은 도안 동 ${left}개"
                     else -> "지금 은으로 합성할 수 있어요"
@@ -787,14 +799,16 @@ fun ChargingScreen(onDone: () -> Unit) {
                     }
                 }
                 HorizontalDivider(color = LINE)
-                SilverProgress(available, Modifier.fillMaxWidth())
-                LinearProgressIndicator(
-                    progress = { bar.value },
-                    modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(7.dp)),
-                    color = accent,
-                    trackColor = Color(0x14FFFFFF),
-                )
-                Note("같은 도안 동 ${SYNTH_COST}개를 모으면 도감에서 [합성하기]로 은 1개를 만들 수 있어요")
+                if (rec.badge == WOLF) Sub(WOLF_RULE) else {
+                    SilverProgress(available, Modifier.fillMaxWidth())
+                    LinearProgressIndicator(
+                        progress = { bar.value },
+                        modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(7.dp)),
+                        color = accent,
+                        trackColor = Color(0x14FFFFFF),
+                    )
+                    Note("같은 도안 동 ${SYNTH_COST}개를 모으면 도감에서 [합성하기]로 은 1개를 만들 수 있어요")
+                }
                 if (fill) Spacer(Modifier.weight(1f))
                 Btn("도감에서 보기", Modifier.fillMaxWidth().height(84.dp), onClick = onDone)
             }

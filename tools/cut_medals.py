@@ -1,6 +1,8 @@
 """피그마에서 내보낸 메달 판(PNG)을 지역·도안·등급별 메달 파일로 자른다.
 
 사용: python3 -I cut_medals.py <sheet.png> <assets/medals 폴더> [배율, 기본 3]
+      python3 -I cut_medals.py single <메달.png> <출력.webp> <고리 모양을 빌릴 동 메달.webp>
+      (한 장짜리 메달, 예: 늑구 한정 메달 → assets/medals/30140_0_l.webp, l = 한정)
 
 판은 'Medal v26 / …' 컴포넌트 30개를 한 줄에 8개씩, 칸 200x224로 늘어놓은 것(피그마 공통 부품 페이지).
 출력: {지역코드}_{도안}_{b|s|g}.webp (투명 배경, 손실 압축 품질 90).
@@ -23,11 +25,6 @@ ORDER = [
 ]
 TIERS = ["b", "s", "g"]
 COLS, CELL_W, CELL_H = 8, 200, 224
-
-sheet_path, out_dir = sys.argv[1], pathlib.Path(sys.argv[2])
-scale = int(sys.argv[3]) if len(sys.argv) > 3 else 3
-sheet = Image.open(sheet_path).convert("RGBA")
-out_dir.mkdir(parents=True, exist_ok=True)
 
 BG_TOLERANCE = 18.0  # 배경으로 볼 색 거리
 EDGE = 40.0  # 경계에서 이 거리부터 완전히 불투명
@@ -66,6 +63,19 @@ def compose(rgb, bg, alpha):
 # The silver ring tab has highlights as light as the background, so keying eats into it. The tab has the same
 # shape in every tier: the silver medal takes the bronze one's alpha above the disc.
 TAB_ROWS = 110 / 672
+
+if sys.argv[1] == "single":
+    src, out, tab_from = sys.argv[2:5]
+    rgb, bg, alpha = alpha_of(Image.open(src).convert("RGBA"))
+    rows = int(alpha.shape[0] * TAB_ROWS)
+    alpha[:rows] = np.asarray(Image.open(tab_from).getchannel("A"), np.float32)[:rows] / 255
+    compose(rgb, bg, alpha).save(out, "WEBP", quality=90, method=6)
+    sys.exit()
+
+sheet_path, out_dir = sys.argv[1], pathlib.Path(sys.argv[2])
+scale = int(sys.argv[3]) if len(sys.argv) > 3 else 3
+sheet = Image.open(sheet_path).convert("RGBA")
+out_dir.mkdir(parents=True, exist_ok=True)
 
 cells = [(key, design, tier) for _, key, design in ORDER for tier in TIERS]
 total = 0

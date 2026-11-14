@@ -20,7 +20,9 @@ class BadgeEngineTest {
     private val s2 = Station("S2", "일산 충전소", 37.66, 126.77, 1)
     private val s3 = Station("S3", "공주 충전소", 36.45, 127.12, 2)
     private val s4 = Station("S4", "권선 충전소", 37.25, 127.0, 3)
-    private val index = StationIndex(listOf(s1, s2, s3, s4), listOf(deogyang, ilsan, gongju, suwon))
+    private val daejeonSeo = Region(4, "30170", "대전광역시 서구", "30170")
+    private val s5 = Station("S5", "대전 서구 충전소", 36.35, 127.38, 4)
+    private val index = StationIndex(listOf(s1, s2, s3, s4, s5), listOf(deogyang, ilsan, gongju, suwon, daejeonSeo))
     private val day = LocalDate.of(2026, 11, 13)
 
     private fun fixed(double: Double, int: Int) = object : Random() {
@@ -51,6 +53,20 @@ class BadgeEngineTest {
         assertEquals(0, designCount("41110"))
         assertEquals(1, designCount("41280"))
         assertEquals(3, designCount("44150"))
+    }
+
+    @Test
+    fun wolfOnceForAnyDaejeonGuInDecember() {
+        val engine = BadgeEngine(fixed(0.5, 0))
+        val dec = LocalDate.of(2026, 12, 3)
+        val (a, first) = engine.onValidCharge(GameState(), s5, dec, 1, index)
+        assertEquals(ChargeOutcome.Awarded(WOLF), first)
+        assertEquals(listOf(ChargeRecord(s5, dec, 1, WOLF)), a.charges)
+        assertEquals(ChargeOutcome.NoBadge, engine.onValidCharge(a, s5, dec.plusDays(1), 2, index).second)
+        assertEquals(ChargeOutcome.NoBadge, engine.onValidCharge(GameState(), s5, LocalDate.of(2026, 11, 30), 3, index).second)
+        assertEquals(ChargeOutcome.NoBadge, engine.onValidCharge(GameState(), s5, LocalDate.of(2027, 1, 1), 4, index).second)
+        assertEquals(ChargeOutcome.Awarded(bronze("41280", 0)), engine.onValidCharge(GameState(), s1, dec, 5, index).second)
+        assertEquals("늑구", designName(WOLF.design))
     }
 
     @Test
