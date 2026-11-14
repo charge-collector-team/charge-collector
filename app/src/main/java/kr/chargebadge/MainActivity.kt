@@ -87,6 +87,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -409,8 +412,15 @@ fun ChargeTheme(season: Season, content: @Composable () -> Unit) {
         onSurfaceVariant = SUB,
         outline = Color(0x2EFFFFFF),
     )
-    MaterialTheme(colorScheme = colors, typography = typography, content = content)
+    // Everything (text, badges, spacing) is drawn UI_SCALE times larger so the screen is filled, not padded.
+    val d = LocalDensity.current
+    CompositionLocalProvider(LocalDensity provides Density(d.density * UI_SCALE, d.fontScale)) {
+        MaterialTheme(colorScheme = colors, typography = typography, content = content)
+    }
 }
+
+/** Below about 1.39 the 1672px-wide car split view drops under the 1200dp wide-layout breakpoint. */
+private const val UI_SCALE = 1.2f
 
 /** Primary action: accent gradient, dark bold label. */
 @Composable

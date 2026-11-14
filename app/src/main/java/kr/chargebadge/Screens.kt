@@ -311,7 +311,6 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
     // The bronze design of this art closest to a silver; null where the region has no medal.
     val target = region?.let { r -> (0 until designCount(r.artKey)).map { Badge(Design(r.artKey, it), Tier.BRONZE) }.maxByOrNull { state.available(it) } }
     val have = target?.let { max(0, state.available(it)) } ?: 0
-    val ring = if (compact) 280.dp else 340.dp
     Column(modifier.glass().cornerGlow(accent).padding(40.dp)) {
         Eyebrow(
             when {
@@ -335,12 +334,16 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
                 else -> "공공 충전소에서 배터리를 ${MIN_SOC_GAIN}% 이상 충전하면 배지를 받아요"
             },
         )
-        Box(Modifier.fillMaxWidth().padding(top = if (compact) 28.dp else 44.dp, bottom = 28.dp), contentAlignment = Alignment.Center) {
+        // Side panel: the ring takes the height left over (up to 340dp), so the card fits at any UI scale.
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().then(if (compact) Modifier.height(336.dp) else Modifier.weight(1f)).padding(vertical = if (compact) 28.dp else 24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val ring = minOf(maxHeight, 340.dp)
             ProgressRing(ring, have / SYNTH_COST.toFloat()) {
                 if (target != null && state.count(target) > 0) Medal(target, ring * 0.62f) else Unknown(ring * 0.6f)
             }
         }
-        if (compact) Spacer(Modifier.height(28.dp)) else Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             listOf(
                 idx.regions.count { Game.engine.visited(state, it.index) } to "방문 지역",
@@ -715,7 +718,7 @@ fun AcquiredScreen(onDone: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Text("충전이 확인됐어요", Modifier.enter(80), fontSize = 40.sp, fontWeight = FontWeight.Bold, color = TXT, textAlign = TextAlign.Center)
         Spacer(Modifier.weight(1f))
-        Box(Modifier.size(460.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(400.dp), contentAlignment = Alignment.Center) {
             Box(
                 Modifier.matchParentSize().graphicsLayer {
                     val v = land.value.coerceIn(0f, 1f)
@@ -856,9 +859,16 @@ fun FriendsScreen(go: (Screen) -> Unit) {
                 maxWidth >= 700.dp -> 2
                 else -> 1
             }
-            FlowRow(maxItemsInEachRow = columns, horizontalArrangement = Arrangement.spacedBy(24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                state.friends.forEachIndexed { i, f ->
-                    FriendCard(f, state.trades.count { it.friendId == f.id }, Modifier.weight(1f).enter(60 + i * 80)) { go(Screen.Trade(f.id)) }
+            // Plain rows, not a FlowRow: inside a FlowRow a card's badges that wrap to a second line were cut off.
+            Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                state.friends.chunked(columns).forEachIndexed { r, row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        row.forEachIndexed { c, f ->
+                            val i = r * columns + c
+                            FriendCard(f, state.trades.count { it.friendId == f.id }, Modifier.weight(1f).enter(60 + i * 80)) { go(Screen.Trade(f.id)) }
+                        }
+                        repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
             }
         }
