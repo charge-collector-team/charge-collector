@@ -49,6 +49,12 @@ adb -e install -r app/build/outputs/apk/release/app-release.apk
   adb -e shell am start --user 10 -n kr.chargebadge/.MainActivity --es sample 2026-12-03
   ```
 
+- **시연용 현위치**: 에뮬레이터의 내비 위치는 한곳에 고정되어 있어, 아래 명령으로 앱이 쓰는 차 위치를 옮깁니다(예: 공주 산성시장 공영주차타워). 앱을 다시 켜도 유지되고, `--es here off`는 내비 위치로 되돌립니다.
+
+  ```bash
+  adb -e shell am start --user 10 -n kr.chargebadge/.MainActivity --es here 36.45881,127.12272
+  ```
+
 ## 구조
 
 ```
