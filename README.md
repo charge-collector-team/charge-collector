@@ -39,7 +39,7 @@
 adb -e install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK는 [Releases](../../releases)에 있습니다.
+릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK: [release/charge-collector-v0.1.apk](release/charge-collector-v0.1.apk)
 
 - **충전 시험**: `adb -e forward tcp:8088 tcp:8088` 뒤 에뮬레이터 차량 콘솔(`http://127.0.0.1:8088`)에서 기어를 P로 두고 충전 포트를 연 다음, 충전율을 1%p씩 올립니다. 에뮬레이터 위치가 공공 충전소 50m 안에 있어야 합니다.
 - **시연용 샘플 데이터**: 아래 명령은 그 날짜를 "오늘"로 두고 1년치 충전 기록을 넣습니다. 도감, 1주년 지도, 연말 트리를 바로 볼 수 있습니다. `--es sample off`는 실제 날짜로 되돌립니다.

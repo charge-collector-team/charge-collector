@@ -4,6 +4,7 @@ build/
 .kotlin/
 local.properties
 *.apk
+!release/*.apk
 
 # secrets
 .env
