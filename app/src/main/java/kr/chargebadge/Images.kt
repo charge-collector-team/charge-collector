@@ -45,7 +45,6 @@ import kr.chargebadge.core.KoreaMap
 import kr.chargebadge.core.Source
 import kr.chargebadge.core.Station
 import kr.chargebadge.core.Tier
-import java.io.File
 import kotlin.concurrent.thread
 import kotlin.math.cos
 import kotlin.math.max
@@ -206,6 +205,22 @@ private fun halfAt(i: Int, y: Float) = tierHalf(i) * ((y - tierTop(i)) / (tierBo
 
 /** Hook points of the six ornaments, as tree fractions. */
 private val HOOKS = listOf(0.5f to 0.31f, 0.33f to 0.47f, 0.67f to 0.48f, 0.22f to 0.65f, 0.5f to 0.68f, 0.78f to 0.65f)
+
+/** Ornament width in a tree [th] tall; an ornament hangs this far below its hook. */
+private fun ornamentWidth(th: Float) = th * 0.135f
+private fun ornamentCenter(box: TreeBox, i: Int): Offset {
+    val (hx, hy) = HOOKS[i]
+    return box.q(hx, hy) + Offset(0f, box.th * 0.04f + ornamentWidth(box.th) * 0.65f)
+}
+
+/** Center of ornament [i] in a tree scene of [size] (before its sway). */
+fun treeOrnamentCenter(size: Size, i: Int): Offset = ornamentCenter(TreeBox(size.width, size.height), i)
+
+/** The ornament under [tap] in a tree scene of [size], if any. */
+fun treeOrnamentAt(size: Size, tap: Offset): Int? {
+    val box = TreeBox(size.width, size.height)
+    return HOOKS.indices.firstOrNull { (ornamentCenter(box, it) - tap).getDistance() < ornamentWidth(box.th) * 0.6f }
+}
 private val BULB_COLORS = listOf(Color(0xFFFFE3A0), Color(0xFFFFF6E0), Color(0xFF7FD6FF), Color(0xFFFFA48C))
 
 /** A sagging light string on each tier but the top one: start, control, end, as tree fractions. */
@@ -394,12 +409,12 @@ fun DrawScope.drawTreeLive(slots: List<Badge?>, time: Float) {
     }
 
     // ornaments hang from a gold bow and sway a few degrees
-    val mw = th * 0.135f
+    val mw = ornamentWidth(th)
     HOOKS.forEachIndexed { i, (hx, hy) ->
         val hook = q(hx, hy)
         val sway = 3.5f * sin(tau * (time * 20 + i * 0.17f))
         rotate(sway, hook) {
-            val c = Offset(hook.x, hook.y + th * 0.04f + mw * 0.65f)
+            val c = ornamentCenter(box, i)
             drawLine(Color(0xFFE8C66A), hook, Offset(c.x, c.y - mw * 0.62f), th * 0.003f)
             val b = slots.getOrNull(i)
             if (b != null) {
@@ -436,16 +451,6 @@ fun DrawScope.drawTreeLive(slots: List<Badge?>, time: Float) {
     }
 }
 
-/** The whole scene, still, as saved. [title] and [sub] go on the image's top-left. */
-fun DrawScope.drawTreeScene(slots: List<Badge?>, title: String? = null, sub: String? = null) {
-    drawTreeBase()
-    drawTreeLive(slots, 0.21f)
-    if (title != null) {
-        val u = min(size.width, size.height)
-        text(title, u * 0.05f, u * 0.1f, textPaint(TXT, u * 0.055f, bold = true))
-        sub?.let { text(it, u * 0.05f, u * 0.155f, textPaint(SUB, u * 0.03f)) }
-    }
-}
 
 private const val KX = 0.80f
 
@@ -692,11 +697,3 @@ fun drawToBitmap(width: Int, height: Int, draw: DrawScope.() -> Unit): Bitmap {
     return img.asAndroidBitmap()
 }
 
-fun treeBitmap(slots: List<Badge?>, title: String, sub: String): Bitmap = drawToBitmap(1600, 1200) { drawTreeScene(slots, title, sub) }
-
-fun savePng(context: Context, bmp: Bitmap, name: String): File {
-    val dir = File(context.filesDir, "images").apply { mkdirs() }
-    val f = File(dir, name)
-    f.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-    return f
-}

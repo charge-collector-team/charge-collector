@@ -1,6 +1,5 @@
 package kr.chargebadge
 
-import android.graphics.BitmapFactory
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -84,6 +83,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -92,14 +92,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -138,7 +135,6 @@ import kr.chargebadge.core.treeEditable
 import kr.chargebadge.core.treeSlots
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -1070,98 +1066,93 @@ private fun FlowArrows(modifier: Modifier, active: Boolean) {
 }
 
 // S7
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TreeScreen() {
-    val context = LocalContext.current
     val state = Game.state
     val today = Game.today()
-    val editable = treeEditable(today)
     val slots = treeSlots(state, today.year)
-    var editing by rememberSaveable { mutableStateOf(false) }
-    var picking by remember { mutableStateOf<Int?>(null) }
-    var msg by remember { mutableStateOf("") }
-    var savedVersion by remember { mutableStateOf(0) }
-    val treeTime by rememberInfiniteTransition(label = "tree").animateFloat(0f, 1f, infiniteRepeatable(tween(60_000, easing = LinearEasing)), label = "treeTime")
     val title = "${today.year}, 나의 충전 여행"
-    val sub = "올해의 기억을 골라 트리에 걸어 보세요"
-    val onSet: (Int, Badge?) -> Unit = { slot, b ->
-        msg = runCatching {
-            Game.update { setTreeSlot(it, today, slot, b) }
-            ""
-        }.getOrElse { "이 배지는 더 넣을 수 없어요" }
-        picking = null
+    if (!treeEditable(today)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(PAGE), verticalArrangement = GAP) {
+            Header(title, "올해의 기억을 트리에 걸어 두는 곳이에요")
+            StateCard("12월에 열려요", "트리는 12월 1~31일에만 꾸밀 수 있어요.")
+        }
+        return
     }
+    // The tapped ornament: the tree zooms to it, and only then can its badge be changed.
+    var selected by remember { mutableStateOf<Int?>(null) }
+    // The last one tapped, so zooming out heads back from it.
+    var focus by remember { mutableStateOf(0) }
+    var msg by remember { mutableStateOf("") }
+    val t by animateFloatAsState(if (selected != null) 1f else 0f, tween(420, easing = Emphasized), label = "treeZoom")
+    val treeTime by rememberInfiniteTransition(label = "tree").animateFloat(0f, 1f, infiniteRepeatable(tween(60_000, easing = LinearEasing)), label = "treeTime")
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= 1200.dp
-        val sceneH = if (wide) maxHeight else 760.dp
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            if (!editable) {
-                Column(Modifier.padding(PAGE), verticalArrangement = GAP) {
-                    Header(title, "올해의 기억을 트리에 걸어 두는 곳이에요")
-                    StateCard("12월에 열려요", "트리는 12월 1~31일에만 만들고 고칠 수 있어요. 저장한 트리는 언제든 볼 수 있어요.")
+        val panel = with(LocalDensity.current) { 560.dp.toPx() }
+        val z = 2.2f
+        // scene = tree * zoom + shift; the zoomed ornament lands in the middle of what the panel leaves free.
+        fun transform(size: Size): Pair<Float, Offset> {
+            val c = treeOrnamentCenter(size, focus)
+            val target = if (wide) Offset((size.width - panel) / 2, size.height / 2) else Offset(size.width / 2, size.height * 0.25f)
+            val pan = Offset((target.x - c.x * z).coerceIn(size.width * (1 - z), 0f), (target.y - c.y * z).coerceIn(size.height * (1 - z), 0f))
+            return 1 + (z - 1) * t to pan * t
+        }
+        Box(
+            // Clipped, so the zoomed tree stays below the top bar.
+            Modifier.fillMaxSize().clipToBounds().pointerInput(Unit) {
+                detectTapGestures { tap ->
+                    val (zoom, shift) = transform(size.toSize())
+                    val hit = treeOrnamentAt(size.toSize(), (tap - shift) / zoom)
+                    if (hit != null) {
+                        focus = hit
+                        selected = hit
+                    } else selected = null
                 }
-            } else {
-                val count = slots.count { it != null }
-                val controls: @Composable () -> Unit = {
-                    OutlineBtn("이미지 저장") {
-                        savePng(context, treeBitmap(slots, title, sub), "tree_${today.year}.png")
-                        savedVersion++
-                        msg = "저장했어요"
-                    }
-                    Btn("올해의 배지 고르기") {
-                        editing = !editing
-                        picking = null
-                    }
-                }
-                val editor: @Composable (Modifier) -> Unit = { m ->
-                    TreeEditor(m, slots, picking, { picking = it }, onSet) {
-                        editing = false
-                        picking = null
-                    }
-                }
-                Row(Modifier.fillMaxWidth().height(sceneH)) {
-                    Box(Modifier.weight(1f).fillMaxHeight()) {
-                        // Separate layers: the moving one redraws every frame without redrawing the tree under it.
-                        Canvas(Modifier.fillMaxSize().graphicsLayer(), contentDescription = "연말 트리 미리보기") { drawTreeBase() }
-                        Canvas(Modifier.fillMaxSize().graphicsLayer()) { drawTreeLive(slots, treeTime) }
-                        Column(Modifier.padding(PAGE), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Title(title)
-                            Sub(sub)
-                        }
-                        if (wide) {
-                            if (!editing) OrnamentCard(count, Modifier.align(Alignment.BottomStart).padding(start = 40.dp, bottom = 40.dp))
-                            Row(Modifier.align(Alignment.BottomEnd).padding(40.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) { controls() }
-                        }
-                    }
-                    if (wide && editing) editor(Modifier.width(560.dp).fillMaxHeight().background(Color(0xFF0A1222)).verticalScroll(rememberScrollState()))
-                }
-                if (!wide) Column(Modifier.padding(PAGE), verticalArrangement = GAP) {
-                    OrnamentCard(count, Modifier.fillMaxWidth())
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { controls() }
-                    if (editing) editor(Modifier.fillMaxWidth().case(28.dp))
-                }
+            },
+        ) {
+            // Separate layers: the moving one redraws every frame without redrawing the tree under it.
+            Box(
+                Modifier.fillMaxSize().graphicsLayer {
+                    val (zoom, shift) = transform(size)
+                    transformOrigin = TransformOrigin(0f, 0f)
+                    scaleX = zoom
+                    scaleY = zoom
+                    translationX = shift.x
+                    translationY = shift.y
+                },
+            ) {
+                Canvas(Modifier.fillMaxSize().graphicsLayer(), contentDescription = "연말 트리") { drawTreeBase() }
+                Canvas(Modifier.fillMaxSize().graphicsLayer()) { drawTreeLive(slots, treeTime) }
             }
-            Column(Modifier.padding(PAGE), verticalArrangement = GAP) {
-                if (msg.isNotEmpty()) Toast(msg)
-                Heading("저장한 트리")
-                val saved = remember(savedVersion) { savedImages(context, "tree_") }
-                if (saved.isEmpty()) Sub("아직 없어요")
-                FlowRow(horizontalArrangement = GAP, verticalArrangement = GAP) {
-                    saved.forEach { f ->
-                        val img = remember(f.path, savedVersion) { BitmapFactory.decodeFile(f.path) }
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (img != null) Image(
-                                img.asImageBitmap(), f.name,
-                                Modifier.width(480.dp).aspectRatio(img.width.toFloat() / img.height).clip(RoundedCornerShape(20.dp)).border(1.dp, LINE, RoundedCornerShape(20.dp)),
-                                contentScale = ContentScale.Fit,
-                            )
-                            Note(f.nameWithoutExtension.removePrefix("tree_") + "년 트리")
-                        }
-                    }
-                }
+            Column(Modifier.graphicsLayer { alpha = 1 - t }.padding(PAGE), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Title(title)
+                Sub("장식을 누르면 크게 보고 다른 배지로 바꿀 수 있어요")
+            }
+            OrnamentCard(slots.count { it != null }, Modifier.align(Alignment.BottomStart).padding(start = 40.dp, bottom = 40.dp).graphicsLayer { alpha = 1 - t })
+        }
+        AnimatedContent(
+            selected,
+            Modifier.align(if (wide) Alignment.CenterEnd else Alignment.BottomCenter)
+                .then(if (wide) Modifier.width(560.dp).fillMaxHeight() else Modifier.fillMaxWidth().fillMaxHeight(0.5f)),
+            { fadeThrough() },
+            label = "ornament",
+        ) { i ->
+            if (i != null) {
+                OrnamentPanel(
+                    i, slots[i], today.year,
+                    onSet = { b ->
+                        msg = runCatching {
+                            Game.update { setTreeSlot(it, today, i, b) }
+                            ""
+                        }.getOrElse { "이 배지는 더 넣을 수 없어요" }
+                    },
+                    onClose = { selected = null },
+                    // Taps on the panel's blank parts stay in the panel instead of closing it.
+                    Modifier.fillMaxSize().background(Color(0xFF0A1222)).pointerInput(Unit) { detectTapGestures { } },
+                )
             }
         }
+        if (msg.isNotEmpty()) Toast(msg, Modifier.align(Alignment.BottomStart).padding(24.dp))
     }
 }
 
@@ -1174,51 +1165,84 @@ private fun OrnamentCard(count: Int, modifier: Modifier) {
     }
 }
 
+/** One ornament's slot in two tabs: the story of the badge hanging there, and the owned badges to hang instead. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TreeEditor(modifier: Modifier, slots: List<Badge?>, picking: Int?, onPick: (Int?) -> Unit, onSet: (Int, Badge?) -> Unit, onClose: () -> Unit) {
+private fun OrnamentPanel(slot: Int, current: Badge?, year: Int, onSet: (Badge?) -> Unit, onClose: () -> Unit, modifier: Modifier) {
     val idx = Game.index
     val state = Game.state
-    val accent = MaterialTheme.colorScheme.primary
-    Column(modifier.padding(32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // An empty ornament has no story yet, so it opens on the swap tab.
+    var story by remember(slot) { mutableStateOf(current != null) }
+    // Like the detail card: rows past the bottom fade out instead of being cut, and scroll into view.
+    Column(
+        modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.drawWithContent {
+            drawContent()
+            drawRect(Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = size.height - 48.dp.toPx(), endY = size.height), blendMode = BlendMode.DstIn)
+        }.verticalScroll(rememberScrollState()).padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("트리 장식 고르기", Modifier.weight(1f), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+            Text("장식 ${slot + 1}", Modifier.weight(1f), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
             CloseBtn(onClose)
         }
-        for (i in 0 until TREE_SLOTS) {
-            val b = slots[i]
-            val shape = RoundedCornerShape(18.dp)
-            Row(
-                Modifier.fillMaxWidth().press { onPick(i) }.clip(shape)
-                    .background(if (picking == i) accent.copy(alpha = 0.12f) else Color(0x08FFFFFF))
-                    .then(if (picking == i) Modifier.border(2.dp, accent, shape) else Modifier)
-                    .padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Medal(b ?: Badge(Design("", 0), Tier.BRONZE), 60.dp, owned = b != null)
-                Column(Modifier.weight(1f)) {
-                    Text("장식 ${i + 1}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
-                    Note(b?.let { badgeName(idx, it) } ?: "비어 있음")
-                }
-                OutlineBtn("바꾸기") { onPick(i) }
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Pill("이야기", story) { story = true }
+            Pill("바꾸기", !story) { story = false }
         }
-        picking?.let { slot ->
-            HorizontalDivider(color = LINE)
-            Heading("장식 ${slot + 1}에 걸 배지")
-            OutlineBtn("비우기") { onSet(slot, null) }
+        if (story) {
+            if (current == null) Sub("아직 비어 있어요. '바꾸기'에서 배지를 걸어 보세요.")
+            else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("${shortArt(idx, current.design.artKey)} · ${designName(current.design)}", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+                    TierTag(current.tier)
+                }
+                badgeStory(state, idx, current, year).forEach { InfoText(it) }
+            }
+        } else {
+            if (current == null) Sub("아직 비어 있어요")
+            else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Sub("지금 걸린 배지: ${shortArt(idx, current.design.artKey)} · ${designName(current.design)}")
+                TierTag(current.tier)
+            }
+            if (current != null) OutlineBtn("비우기") { onSet(null) }
+            Heading("걸 배지 고르기")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 state.owned.keys.sortedWith(compareByDescending<Badge> { it.tier }.thenBy { it.design.artKey }.thenBy { it.design.number }).forEach { b ->
-                    BadgeSlot(b, state.count(b), well = 112.dp) { onSet(slot, b) }
+                    BadgeSlot(b, state.count(b), well = 96.dp, selected = b == current) { onSet(b) }
                 }
             }
         }
     }
 }
 
-private fun savedImages(context: android.content.Context, prefix: String): List<File> =
-    File(context.filesDir, "images").listFiles { f -> f.name.startsWith(prefix) }.orEmpty().sortedByDescending { it.name }
+/** "3월 14일", with the year in front when it is not [year]. */
+private fun dayLabel(d: LocalDate, year: Int) = (if (d.year == year) "" else "${d.year}년 ") + "${d.monthValue}월 ${d.dayOfMonth}일"
+
+/** How [b] was first got, then the year's charging that gave its region's badges: a paragraph each. */
+private fun badgeStory(state: GameState, idx: StationIndex, b: Badge, year: Int): List<String> {
+    val first = state.acquisitions.filter { it.badge == b }.minByOrNull { it.timeMillis } ?: return listOf("아직 받은 기록이 없어요.")
+    val day = dayLabel(date(first.timeMillis), year)
+    val how = when (first.source) {
+        Source.CHARGE -> {
+            val place = state.charges.firstOrNull { it.badge == b && it.timeMillis == first.timeMillis }?.let { "${it.station.name}에서 " } ?: ""
+            when (b.tier) {
+                Tier.GOLD -> "$day, ${place}충전하다 받은 금 배지예요. 금은 충전할 때마다 ${pct(GOLD_CHANCE)} 확률로 나와요."
+                Tier.LIMITED -> "$day, ${place}충전하다 받은 한정 배지예요."
+                else -> "$day, ${place}충전하고 받았어요."
+            }
+        }
+        Source.TRADE -> "$day, ${state.friends.firstOrNull { it.id == first.friendId }?.name?.let(::withGwa) ?: "친구와"} 교환해서 받았어요."
+        Source.SYNTHESIS -> "$day, 같은 도안 동 ${SYNTH_COST}개를 모아 만든 은 배지예요."
+    }
+    val art = b.design.artKey
+    val trips = state.charges.filter { it.badge.design.artKey == art && it.date.year == year }
+    val region = when (trips.size) {
+        0 -> null
+        1 -> "올해 ${shortArt(idx, art)}에서는 이때 한 번 충전했어요."
+        else -> "올해 ${shortArt(idx, art)}에서 ${trips.size}번 충전했어요. 처음 들른 날은 ${dayLabel(trips.minOf { it.date }, year)}이에요."
+    }
+    return listOfNotNull(how, region)
+}
 
 // S10
 @Composable
