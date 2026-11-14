@@ -333,13 +333,11 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
                 if (target != null && state.count(target) > 0) Medal(target, ring * 0.62f) else Unknown(ring * 0.6f)
             }
         }
-        SilverProgress(have, Modifier.fillMaxWidth())
         if (compact) Spacer(Modifier.height(28.dp)) else Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             listOf(
                 idx.regions.count { Game.engine.visited(state, it.index) } to "방문 지역",
                 state.owned.values.sum() to "모은 배지",
-                state.owned.filterKeys { it.tier == Tier.GOLD }.values.sum() to "금 배지",
             ).forEach { (n, label) ->
                 Column(
                     Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(Color(0x0DFFFFFF))
