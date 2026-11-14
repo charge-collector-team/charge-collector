@@ -1,0 +1,25 @@
+# build outputs
+build/
+.gradle/
+.kotlin/
+local.properties
+*.apk
+
+# secrets
+.env
+
+# data downloads (tools/README 참고)
+tools/raw/
+tools/out/
+tools/stations.json
+tools/regions.json
+tools/report.txt
+__pycache__/
+
+# 내부 작업 자료 (실명·로컬 경로·대용량 캡처가 있어 올리지 않는다)
+TEAM_SPEC.md
+design-ref/
+qa/
+
+.DS_Store
+.idea/
