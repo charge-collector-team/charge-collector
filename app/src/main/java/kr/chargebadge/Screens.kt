@@ -559,8 +559,11 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
                 contentAlignment = Alignment.Center,
             ) { Medal(badge, 176.dp, count > 0) }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${shortArt(idx, badge.design.artKey)} · ${tierColorName(badge.tier)}", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
-                Sub("${designName(badge.design)} · ${idx.region(s.regionIndex).name}")
+                Text("${shortArt(idx, badge.design.artKey)} · ${designName(badge.design)}", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TierTag(badge.tier)
+                    Sub(idx.region(s.regionIndex).name)
+                }
             }
             // Actions before the table, so both stay above the fold in the card.
             if (badge.tier == Tier.BRONZE) {
@@ -967,8 +970,8 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
                                 val ok = b.tier == Tier.BRONZE && state.available(b) > 0
                                 val note = when {
                                     b.tier != Tier.BRONZE -> "동만 교환"
-                                    state.locked(b) > 0 -> "×${state.count(b)} · 잠금 ${state.locked(b)}"
-                                    else -> "×${state.count(b)}"
+                                    state.locked(b) > 0 -> "잠금 ${state.locked(b)}"
+                                    else -> null
                                 }
                                 BadgeSlot(b, state.count(b), well = 112.dp, selected = give == b, enabled = ok, note = note) { give = b }
                             }

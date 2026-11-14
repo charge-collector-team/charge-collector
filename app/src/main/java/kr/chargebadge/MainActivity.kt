@@ -594,7 +594,7 @@ fun Well(size: Dp, content: @Composable () -> Unit) {
     ) { content() }
 }
 
-/** Showcase slot: medal in a well, "지역 · 도안" and the tier chip with count. */
+/** Showcase slot: medal in a well with the count at its bottom left, then "지역 · 도안". */
 @Composable
 fun BadgeSlot(
     badge: Badge,
@@ -621,9 +621,9 @@ fun BadgeSlot(
     ) {
         Box {
             Well(well) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
-            if (owned && count > 1) Text(
+            if (owned && count > 0) Text(
                 "×$count",
-                Modifier.align(Alignment.BottomEnd).offset(x = (-4).dp, y = (-4).dp)
+                Modifier.align(Alignment.BottomStart).offset(x = 4.dp, y = (-4).dp)
                     .clip(CircleShape).background(Color(0xFF0F1A30)).padding(3.dp)
                     .clip(CircleShape).background(NAVY).padding(horizontal = 10.dp, vertical = 1.dp),
                 fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White,
@@ -637,10 +637,14 @@ fun BadgeSlot(
             fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
             color = if (owned) TXT else SUB,
         )
-        Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (owned || lockedTier) TierTag(badge.tier)
-            Text(note ?: if (owned) "×$count" else "아직 없음", fontSize = 20.sp, color = SUB, maxLines = 1)
+        // The count is on the medal; this line is only for a region's 동·은·금 slots, empty slots and trade notes.
+        val text = note ?: if (owned) null else "아직 없음"
+        if (lockedTier || text != null) {
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (lockedTier) TierTag(badge.tier)
+                if (text != null) Text(text, fontSize = 20.sp, color = SUB, maxLines = 1)
+            }
         }
     }
 }
