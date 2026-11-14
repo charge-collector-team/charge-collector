@@ -461,19 +461,16 @@ class MapProjection(private val lng0: Float, private val lat1: Float, val scale:
 }
 
 /**
- * The map part of the anniversary image is the left 60%. It fits the visited places, with at least a
- * 3 x 2.4 degree window so a local year still shows its surroundings.
+ * The map part of the anniversary image is the left 60%. It always shows the mainland, its nearby islands and 제주
+ * (from korea_map.txt: lng 126.0..129.58, lat 33.1..38.61), plus any visited place beyond, so nothing is cut off;
+ * zooming in gives the detail.
  */
 fun anniversaryProjection(points: List<Pair<Station, Badge>>, size: Size): MapProjection {
     val area = Rect(0f, 0f, size.width * 0.6f, size.height)
-    fun window(values: List<Double>, fallback: Pair<Double, Double>, minSpan: Double): Pair<Float, Float> {
-        val lo = values.minOrNull() ?: fallback.first
-        val hi = values.maxOrNull() ?: fallback.second
-        val span = max(hi - lo + 0.9, minSpan)
-        return ((lo + hi) / 2 - span / 2).toFloat() to ((lo + hi) / 2 + span / 2).toFloat()
-    }
-    val (lat0, lat1) = window(points.map { it.first.lat }, 33.2 to 38.6, 3.0)
-    val (lng0, lng1) = window(points.map { it.first.lng }, 126.1 to 129.6, 2.4)
+    fun window(values: List<Double>, lo: Double, hi: Double) =
+        ((values + lo).min() - 0.15).toFloat() to ((values + hi).max() + 0.15).toFloat()
+    val (lat0, lat1) = window(points.map { it.first.lat }, 33.1, 38.61)
+    val (lng0, lng1) = window(points.map { it.first.lng }, 126.0, 129.58)
     val scale = min(area.width * 0.92f / ((lng1 - lng0) * KX), area.height * 0.94f / (lat1 - lat0))
     val ox = area.center.x - (lng1 - lng0) * KX * scale / 2
     return MapProjection(lng0, lat1, scale, ox, area.center.y - (lat1 - lat0) * scale / 2, ox, ox + (lng1 - lng0) * KX * scale)
@@ -532,15 +529,64 @@ fun DrawScope.drawAnniversaryMap(paths: MapPaths?, proj: MapProjection, visited:
  * the map, tied to their places by leader lines, so the map stays visible; zooming in ([zoom] past 1.8) slides
  * them onto their places. [pan] is the zoom layer's translation.
  */
-fun DrawScope.drawAnniversaryMarks(points: List<Pair<Station, Badge>>, label: (Badge) -> String, proj: MapProjection, zoom: Float = 1f, pan: Offset = Offset.Zero) {
+fun DrawScope.drawAnniversaryMarks(
+    points: List<Pair<Station, Badge>>,
+    label: (Badge) -> String,
+    proj: MapProjection,
+    zoom: Float = 1f,
+    pan: Offset = Offset.Zero,
+    selected: Int? = null,
+) {
     val u = min(size.width, size.height)
-    val area = Rect(0f, 0f, size.width * 0.6f, size.height)
-    val ps = points.map { (st, _) -> proj.pt(st.lng, st.lat) * zoom + pan }
+    val (ps, at, mw) = anniversaryMarkLayout(points, proj, size, zoom, pan, selected)
     ps.zipWithNext().forEach { (a, b) ->
         drawLine(ACCENT.copy(alpha = 0.25f), a, b, u * 0.022f, StrokeCap.Round)
         drawLine(ACCENT, a, b, u * 0.006f, StrokeCap.Round)
     }
-    if (ps.isEmpty()) return
+    ps.indices.forEach { if (it != selected && at[it] != ps[it]) drawLine(TXT.copy(alpha = 0.4f), ps[it], at[it], u * 0.0025f) }
+    ps.forEach { drawCircle(ACCENT, u * 0.008f, it) }
+    val tag = textPaint(TXT, mw * 0.34f, bold = true, center = true)
+    fun medal(i: Int) {
+        val q = at[i]
+        drawCircle(Brush.radialGradient(0f to ACCENT.copy(alpha = 0.35f), 1f to Color.Transparent, center = q, radius = mw), mw, q)
+        translate(q.x - mw / 2, q.y - mw / 2) { drawMedalCached(points[i].second, mw) }
+    }
+    points.indices.filter { it != selected }.forEach { i ->
+        medal(i)
+        text(label(points[i].second), at[i].x, at[i].y + mw / 2 + mw * 0.43f, tag)
+    }
+    // The selected place: a pin at the station, its medal on a stem above it and the station's name below.
+    selected?.let { i ->
+        val p = ps[i]
+        drawLine(ACCENT, p, at[i] + Offset(0f, mw / 2), u * 0.004f)
+        drawCircle(ACCENT.copy(alpha = 0.3f), u * 0.024f, p)
+        drawCircle(Color.White, u * 0.01f, p)
+        drawCircle(ACCENT, u * 0.01f, p, style = Stroke(u * 0.004f))
+        medal(i)
+        val name = points[i].first.name
+        val paint = textPaint(TXT, mw * 0.3f, bold = true, center = true)
+        val tw = paint.measureText(name)
+        val base = p.y + u * 0.03f + mw * 0.32f
+        drawRoundRect(Color(0xE60A1222), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f))
+        drawRoundRect(ACCENT.copy(alpha = 0.6f), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f), style = Stroke(u * 0.002f))
+        text(name, p.x, base, paint)
+    }
+}
+
+/** Index of the anniversary medal under [tap] (image space), as [drawAnniversaryMarks] places them. */
+fun anniversaryMarkAt(points: List<Pair<Station, Badge>>, proj: MapProjection, size: Size, zoom: Float, pan: Offset, selected: Int?, tap: Offset): Int? {
+    val (_, at, mw) = anniversaryMarkLayout(points, proj, size, zoom, pan, selected)
+    return at.indices.minByOrNull { (at[it] - tap).getDistance() }?.takeIf { (at[it] - tap).getDistance() < mw * 0.65f }
+}
+
+/** Places on the image, medal centers and medal width. */
+private data class MarkLayout(val places: List<Offset>, val medals: List<Offset>, val width: Float)
+
+private fun anniversaryMarkLayout(points: List<Pair<Station, Badge>>, proj: MapProjection, size: Size, zoom: Float, pan: Offset, selected: Int?): MarkLayout {
+    val u = min(size.width, size.height)
+    val area = Rect(0f, 0f, size.width * 0.6f, size.height)
+    val ps = points.map { (st, _) -> proj.pt(st.lng, st.lat) * zoom + pan }
+    if (ps.isEmpty()) return MarkLayout(ps, ps, 0f)
     val top = u * 0.08f
     val bottom = size.height - u * 0.12f
     val perColumn = (ps.size + 1) / 2
@@ -577,17 +623,8 @@ fun DrawScope.drawAnniversaryMarks(points: List<Pair<Station, Badge>>, label: (B
         q
     }
     val t = ((zoom - 1f) / 0.8f).coerceIn(0f, 1f)
-    val at = ps.indices.map { slot[it]!! + (onPlace[it] - slot[it]!!) * t }
-
-    ps.indices.forEach { if (at[it] != ps[it]) drawLine(TXT.copy(alpha = 0.4f), ps[it], at[it], u * 0.0025f) }
-    ps.forEach { drawCircle(ACCENT, u * 0.008f, it) }
-    val tag = textPaint(TXT, mw * 0.34f, bold = true, center = true)
-    points.forEachIndexed { i, (_, b) ->
-        val q = at[i]
-        drawCircle(Brush.radialGradient(0f to ACCENT.copy(alpha = 0.35f), 1f to Color.Transparent, center = q, radius = mw), mw, q)
-        translate(q.x - mw / 2, q.y - mw / 2) { drawMedalCached(b, mw) }
-        text(label(b), q.x, q.y + mw / 2 + mw * 0.43f, tag)
-    }
+    // On its place, the selected medal rises above the station so the pin under it shows.
+    return MarkLayout(ps, ps.indices.map { slot[it]!! + (onPlace[it] - slot[it]!!) * t + if (it == selected) Offset(0f, -mw * 1.1f) * t else Offset.Zero }, mw)
 }
 
 /** Title on a fade into the night, not on a separate panel. */
@@ -614,16 +651,6 @@ fun DrawScope.drawAnniversarySource() {
     val paint = textPaint(SUB.copy(alpha = 0.75f), u * 0.022f)
     val s = "지도: 통계청 통계지리정보서비스(2018)"
     text(s, size.width - u * 0.03f - paint.measureText(s), size.height - u * 0.025f, paint)
-}
-
-/** The whole anniversary image, unzoomed, as saved. */
-fun DrawScope.drawAnniversary(points: List<Pair<Station, Badge>>, label: (Badge) -> String, period: String, paths: MapPaths?) {
-    nightSky()
-    val proj = anniversaryProjection(points, size)
-    drawAnniversaryMap(paths, proj, points.map { it.first.regionIndex }.toSet())
-    drawAnniversaryMarks(points, label, proj)
-    drawAnniversaryTitle(points.size, period)
-    drawAnniversarySource()
 }
 
 private data class MedalKey(val badge: Badge, val px: Int, val art: ImageBitmap?)
@@ -666,9 +693,6 @@ fun drawToBitmap(width: Int, height: Int, draw: DrawScope.() -> Unit): Bitmap {
 }
 
 fun treeBitmap(slots: List<Badge?>, title: String, sub: String): Bitmap = drawToBitmap(1600, 1200) { drawTreeScene(slots, title, sub) }
-
-fun mapBitmap(width: Int, height: Int, points: List<Pair<Station, Badge>>, label: (Badge) -> String, period: String, paths: MapPaths?): Bitmap =
-    drawToBitmap(width, height) { drawAnniversary(points, label, period, paths) }
 
 fun savePng(context: Context, bmp: Bitmap, name: String): File {
     val dir = File(context.filesDir, "images").apply { mkdirs() }

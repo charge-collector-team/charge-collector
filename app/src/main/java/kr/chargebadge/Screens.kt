@@ -8,6 +8,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
@@ -84,6 +85,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -93,6 +95,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -106,6 +110,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toSize
 import kr.chargebadge.core.Badge
 import kr.chargebadge.core.Design
 import kr.chargebadge.core.Friend
@@ -538,7 +543,7 @@ fun DetailScreen(s: Screen.Detail, onClose: () -> Unit) = DetailCard(s, onClose,
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier) {
+private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier, medal: Dp = 176.dp) {
     val idx = Game.index
     val state = Game.state
     val badge = s.badge
@@ -549,7 +554,11 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
     val glow = tierGlow(badge.tier)
     ToastBox(msg, modifier.cornerGlow(MaterialTheme.colorScheme.primary)) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 40.dp, end = 32.dp, top = 28.dp, bottom = 40.dp),
+            // Rows that run past the bottom fade out instead of being cut, and scroll into view.
+            Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.drawWithContent {
+                drawContent()
+                drawRect(Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = size.height - 48.dp.toPx(), endY = size.height), blendMode = BlendMode.DstIn)
+            }.verticalScroll(rememberScrollState()).padding(start = 40.dp, end = 32.dp, top = 28.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -557,13 +566,13 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
                 CloseBtn(onClose)
             }
             Box(
-                Modifier.fillMaxWidth().height(232.dp).drawBehind {
-                    val r = 150.dp.toPx()
+                Modifier.fillMaxWidth().height(medal + 56.dp).drawBehind {
+                    val r = medal.toPx() * 0.85f
                     val c = Offset(center.x, center.y + 12.dp.toPx())
                     drawCircle(Brush.radialGradient(0f to glow.copy(alpha = 0.28f), 1f to Color.Transparent, center = c, radius = r), r, c)
                 },
                 contentAlignment = Alignment.Center,
-            ) { Medal(badge, 176.dp, count > 0) }
+            ) { Medal(badge, medal, count > 0) }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("${shortArt(idx, badge.design.artKey)} · ${designName(badge.design)}", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1215,10 +1224,8 @@ private fun savedImages(context: android.content.Context, prefix: String): List<
 @Composable
 fun AnniversaryScreen() {
     val idx = Game.index
-    val context = LocalContext.current
     val state = Game.state
     val today = Game.today()
-    var msg by remember { mutableStateOf("") }
     val firstMet = state.firstMet ?: today
     val end = latestAnniversary(firstMet, today)?.takeIf { anniversaryOpen(firstMet, today) }
     if (end == null) {
@@ -1238,6 +1245,14 @@ fun AnniversaryScreen() {
     val visited = points.map { it.first.regionIndex }.toSet()
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
+    // The tapped place: the map zooms to its station and its badge's details take the title's place.
+    var selected by remember { mutableStateOf<Int?>(null) }
+    val detail = selected?.let { points.getOrNull(it) }?.let { (_, b) ->
+        // The badge got here may since have gone into a silver or a trade: show the best of its design still owned.
+        val shown = state.owned.keys.filter { it.design == b.design }.maxByOrNull { it.tier } ?: b
+        Screen.Detail(regionFor(idx, state, shown), shown)
+    }
+    val titleAlpha by animateFloatAsState(if (detail == null) 1f else 0f, tween(260), label = "title")
     val scope = rememberCoroutineScope()
     // screen = map * zoom + pan; the map always covers the frame.
     fun clamp(p: Offset, z: Float, frame: IntSize) = Offset(p.x.coerceIn(frame.width * (1 - z), 0f), p.y.coerceIn(frame.height * (1 - z), 0f))
@@ -1267,8 +1282,18 @@ fun AnniversaryScreen() {
             Box(
                 Modifier.width(width).aspectRatio(16 / 9f).clip(RoundedCornerShape(28.dp)).border(1.dp, LINE, RoundedCornerShape(28.dp))
                     .pointerInput(Unit) { detectTransformGestures { c, drag, factor, _ -> zoomAt(c, factor, drag, size) } }
-                    .pointerInput(Unit) {
-                        detectTapGestures(onDoubleTap = { c ->
+                    .pointerInput(points) {
+                        detectTapGestures(onTap = { c ->
+                            val frame = size.toSize()
+                            val proj = anniversaryProjection(points, frame)
+                            anniversaryMarkAt(points, proj, frame, zoom, pan, selected, c)?.let { i ->
+                                selected = i
+                                // The station goes to the middle of the map side; the details cover the right 40%.
+                                val z = 4f
+                                val st = points[i].first
+                                animateTo(z, clamp(Offset(frame.width * 0.3f, frame.height * 0.5f) - proj.pt(st.lng, st.lat) * z, z, size))
+                            }
+                        }, onDoubleTap = { c ->
                             if (zoom < 1.5f) animateTo(2.5f, clamp(c - c / zoom * 2.5f + (pan / zoom) * 2.5f, 2.5f, size))
                             else animateTo(1f, Offset.Zero)
                         })
@@ -1297,21 +1322,26 @@ fun AnniversaryScreen() {
                         translationY = pan.y
                     },
                 ) { drawAnniversaryMap(paths, anniversaryProjection(points, size), visited) }
-                Canvas(Modifier.fillMaxSize()) { drawAnniversaryMarks(points, label, anniversaryProjection(points, size), zoom, pan) }
+                Canvas(Modifier.fillMaxSize()) { drawAnniversaryMarks(points, label, anniversaryProjection(points, size), zoom, pan, selected) }
                 // Zoomed in, the title fades away so the whole frame is map; it comes back at full view.
-                Canvas(Modifier.fillMaxSize().graphicsLayer { alpha = (1f - (zoom - 1f) / 0.6f).coerceIn(0f, 1f) }) { drawAnniversaryTitle(points.size, period) }
+                // A tapped medal's details take the title's place, so the title also fades while they show.
+                Canvas(Modifier.fillMaxSize().graphicsLayer { alpha = min(titleAlpha, (1f - (zoom - 1f) / 0.6f).coerceIn(0f, 1f)) }) {
+                    drawAnniversaryTitle(points.size, period)
+                }
+                // It stops above the source credit line (the bottom 5% of the image) and scrolls if longer.
+                AnimatedContent(detail, Modifier.align(Alignment.TopEnd).fillMaxHeight(0.95f).fillMaxWidth(0.4f), { fadeThrough() }, label = "annivDetail") { d ->
+                    val night = Color(0xFF0A1222)
+                    val back = Brush.horizontalGradient(0f to night.copy(alpha = 0.55f), 0.1f to night.copy(alpha = 0.94f), 1f to night)
+                    if (d != null) DetailCard(d, { selected = null; animateTo(1f, Offset.Zero) }, Modifier.fillMaxSize().background(back), medal = 104.dp)
+                }
+                // The map's source credit stays on top, details or not.
                 Canvas(Modifier.fillMaxSize()) { drawAnniversarySource() }
             }
             Row(Modifier.width(width), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Note("두 손가락으로 벌리거나 두 번 눌러 확대해요", Modifier.weight(1f))
-                if (zoom > 1.01f) OutlineBtn("전체 보기") { animateTo(1f, Offset.Zero) }
-                Btn("배경 이미지 저장") {
-                    savePng(context, mapBitmap(1920, 1080, points, label, period, paths), "anniv_landscape.png")
-                    msg = "배경 이미지를 저장했어요"
-                }
+                Note("두 손가락으로 벌리거나 두 번 눌러 확대해요 · 배지를 누르면 그 충전소로 가요", Modifier.weight(1f))
+                if (zoom > 1.01f) OutlineBtn("전체 보기") { selected = null; animateTo(1f, Offset.Zero) }
             }
         }
-        if (msg.isNotEmpty()) Toast(msg, Modifier.align(Alignment.BottomStart))
     }
 }
 
