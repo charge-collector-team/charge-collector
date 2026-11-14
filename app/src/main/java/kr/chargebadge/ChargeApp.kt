@@ -95,7 +95,7 @@ object Game {
         }
         val nm = app.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel("service", "충전 감지", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(NotificationChannel("badge", "배지 획득", NotificationManager.IMPORTANCE_HIGH))
+        nm.createNotificationChannel(NotificationChannel("badge", "새 배지 알림", NotificationManager.IMPORTANCE_HIGH))
     }
 
     private fun installDay(): LocalDate =

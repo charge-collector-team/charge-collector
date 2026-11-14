@@ -602,7 +602,7 @@ fun DrawScope.drawAnniversaryTitle(count: Int, period: String) {
     text("우리의 1주년", x0, pad + u * 0.09f, textPaint(TXT, u * 0.095f, bold = true))
     text("차와 함께 쌓은 충전의 기억", x0, pad + u * 0.165f, textPaint(ACCENT, u * 0.042f, bold = true))
     val mid = h * 0.45f
-    text("배지가 있는 장소를 잇다", x0, mid, textPaint(TXT, u * 0.05f, bold = true))
+    text("1년 동안 충전하며 다닌 길", x0, mid, textPaint(TXT, u * 0.05f, bold = true))
     text("직접 충전한 장소 ${count}곳을", x0, mid + u * 0.065f, textPaint(SUB, u * 0.036f))
     text("첫 방문 순서로 이었어요", x0, mid + u * 0.112f, textPaint(SUB, u * 0.036f))
     text(period, x0, h - pad, textPaint(ACCENT, u * 0.042f, bold = true))

@@ -178,6 +178,12 @@ private fun regionLabel(r: Region): String {
 /** "경상북도 칠곡군" -> "칠곡군", "경기도 수원시 장안구" -> "수원시 장안구". */
 private fun regionShort(r: Region) = r.name.substringAfter(' ', r.name)
 
+/** [word] + 과/와, by whether its last syllable has a final consonant: "서연과", "현우와". */
+private fun withGwa(word: String): String {
+    val c = word.lastOrNull() ?: return word
+    return word + if (c in '가'..'힣' && (c - '가') % 28 != 0) "과" else "와"
+}
+
 private fun pct(p: Double) = "${"%.0f".format(p * 100)}%"
 
 private fun date(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -208,7 +214,7 @@ private fun SilverProgress(have: Int, modifier: Modifier = Modifier) {
     val accent = MaterialTheme.colorScheme.primary
     val text = if (have >= SYNTH_COST) buildAnnotatedString { withStyle(SpanStyle(color = accent)) { append("지금 은으로 합성할 수 있어요") } }
     else buildAnnotatedString {
-        append("은까지 같은 도안 동 ")
+        append("은 배지까지 동 ")
         withStyle(SpanStyle(color = accent)) { append("$have / $SYNTH_COST") }
     }
     Text(text, modifier, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TXT, textAlign = TextAlign.Center)
@@ -272,7 +278,7 @@ fun CollectionScreen(go: (Screen) -> Unit, detail: Screen.Detail? = null, onClos
                 AnimatedContent(if (regionMode) shown else "showcase", Modifier.weight(1f).fillMaxHeight().case(), { fadeThrough() }, label = "case") { k ->
                     when (k) {
                         is Int -> RegionCase(idx.region(k), go, detail?.badge, null)
-                        null -> Column(Modifier.padding(36.dp)) { Header("시·군·구를 골라 주세요", "도안마다 동·은·금 칸과 수량을 볼 수 있어요") }
+                        null -> Column(Modifier.padding(36.dp)) { Header("시·군·구를 골라 주세요", "고르면 도안별 동·은·금 배지와 개수를 볼 수 있어요") }
                         else -> Showcase(filter, go, detail?.badge) { regionMode = true }
                     }
                 }
@@ -308,7 +314,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
     Column(modifier.glass().cornerGlow(accent).padding(40.dp)) {
         Eyebrow(
             when {
-                here != null -> "지금 있는 곳"
+                here != null -> "현위치"
                 last != null -> "최근 충전한 곳"
                 else -> "충전 수집첩"
             },
@@ -321,11 +327,11 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
         Spacer(Modifier.height(8.dp))
         Sub(
             when {
-                here != null && target == null && wolfDue(state, region!!.artKey, Game.today()) -> "${here.name} · 지금 충전하면 한정 늑구 배지"
-                here != null && target == null -> "${here.name} · 아직 배지가 없는 지역"
-                here != null -> "${here.name} · 등재 충전소"
-                last != null -> "${last.station.name} · ${last.date}"
-                else -> "공공 충전소에서 충전율이 ${MIN_SOC_GAIN}%p 오르면 배지를 받아요"
+                here != null && target == null && wolfDue(state, region!!.artKey, Game.today()) -> "충전소: ${here.name}\n지금 충전하면 한정 배지 늑구를 받아요"
+                here != null && target == null -> "충전소: ${here.name}\n아직 배지가 없는 지역이에요"
+                here != null -> "충전소: ${here.name}\n여기서 충전하면 이 지역 배지를 받아요"
+                last != null -> "충전소: ${last.station.name}\n${last.date} 충전"
+                else -> "공공 충전소에서 배터리를 ${MIN_SOC_GAIN}% 이상 충전하면 배지를 받아요"
             },
         )
         Box(Modifier.fillMaxWidth().padding(top = if (compact) 28.dp else 44.dp, bottom = 28.dp), contentAlignment = Alignment.Center) {
@@ -357,7 +363,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
     }
 }
 
-/** "나의 진열장": owned badges (gold first), then designs not collected yet. [hero] goes on top in half width. */
+/** "내 진열장": owned badges (gold first), then designs not collected yet. [hero] goes on top in half width. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Showcase(
@@ -399,7 +405,7 @@ private fun Showcase(
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Title("나의 진열장")
+                    Title("내 진열장")
                     Text(
                         "배지 ${state.owned.values.sum()}개 · 지역 ${idx.regions.count { Game.engine.cellTier(state, idx, it.index) != null }}곳",
                         fontSize = 22.sp, color = SUB,
@@ -413,10 +419,10 @@ private fun Showcase(
         }
         when {
             owned.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
-                StateCard("처음 시작", "아직 모은 배지가 없어요. 공공 충전소에서 충전율이 ${MIN_SOC_GAIN}%p 이상 오르면 그 시·군·구 배지를 받아요.", "시·군·구별로 둘러보기", onAction = onRegions)
+                StateCard("첫 배지를 모아 보세요", "공공 충전소에서 배터리를 ${MIN_SOC_GAIN}% 이상 충전하면 그 지역 배지를 받아요.", "시·군·구별로 둘러보기", onAction = onRegions)
             }
             shown.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
-                StateCard("필터 결과 없음", "선택한 등급의 배지가 없어요.", "필터 초기화") { filter.value = "전체" }
+                StateCard("해당하는 배지가 없어요", "고른 종류의 배지가 아직 없어요.", "전체 보기") { filter.value = "전체" }
             }
         }
         items(shown, key = ::badgeKey) { b ->
@@ -441,8 +447,8 @@ private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListSt
     Column(modifier) {
         Column(Modifier.padding(start = 32.dp, end = 32.dp, top = 32.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Eyebrow("시·군·구 선택")
-            Text("배지 지역 ${regions.size}곳", fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
-            Sub("방문 ${regions.count { Game.engine.visited(state, it.index) }}곳 · 배지가 있는 칸 ${regions.count { Game.engine.cellTier(state, idx, it.index) != null }}곳")
+            Text("배지를 주는 지역 ${regions.size}곳", fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+            Sub("가 본 곳 ${regions.count { Game.engine.visited(state, it.index) }}곳 · 배지를 모은 곳 ${regions.count { Game.engine.cellTier(state, idx, it.index) != null }}곳")
         }
         LazyColumn(
             Modifier.weight(1f),
@@ -457,7 +463,7 @@ private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListSt
                 RegionRow(regionLabel(r), listOfNotNull(if (visited) "방문" else null, tier?.let(::tierLabel)).joinToString(" · "), r.index == selected) { onSelect(r.index) }
             }
         }
-        OutlineBtn("전체 진열장", Modifier.fillMaxWidth().padding(24.dp), onClick = onExit)
+        OutlineBtn("진열장 전체 보기", Modifier.fillMaxWidth().padding(24.dp), onClick = onExit)
     }
 }
 
@@ -492,7 +498,7 @@ private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badg
             "${regionShort(region)}의 배지",
             listOfNotNull(
                 if (Game.engine.visited(state, region.index)) "직접 충전한 곳" else "아직 충전하지 않은 곳",
-                rep?.let { "지역 대표 ${designName(it.design)} ${tierLabel(it.tier)}" },
+                rep?.let { "대표 배지: ${designName(it.design)} ${tierLabel(it.tier)}" },
             ).joinToString(" · "),
         )
         for (n in 0 until designCount(region.artKey)) {
@@ -507,7 +513,7 @@ private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badg
                 }
             }
         }
-        Heading("직접 충전한 장소")
+        Heading("충전한 충전소")
         if (charges.isEmpty()) Sub("아직 이 지역에서 충전한 기록이 없어요")
         charges.groupBy { it.station.id }.values.sortedByDescending { list -> list.maxOf { it.timeMillis } }.forEach { list ->
             val last = list.maxBy { it.timeMillis }
@@ -518,7 +524,7 @@ private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badg
                 Medal(last.badge, 60.dp)
                 Column(Modifier.weight(1f)) {
                     Text(last.station.name, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
-                    Note("최근 ${last.date} · ${list.size}회")
+                    Note("마지막 충전 ${last.date} · 모두 ${list.size}번")
                 }
             }
         }
@@ -571,25 +577,25 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
                     msg = runCatching {
                         Game.update { Game.engine.synthesize(Game.engine.expireTrades(it, Game.nowMillis()), badge.design, Game.nowMillis()) }
                         "은 배지를 만들었어요"
-                    }.getOrElse { "동이 ${SYNTH_COST}개보다 적어서 합성할 수 없어요" }
+                    }.getOrElse { "같은 도안 동이 ${SYNTH_COST}개 있어야 합성할 수 있어요" }
                 }
             }
-            OutlineBtn(if (isRep) "지역 대표로 지정됨" else "지역 대표로 지정", Modifier.fillMaxWidth(), enabled = count > 0) {
+            OutlineBtn(if (isRep) "대표 배지예요" else "대표 배지로 정하기", Modifier.fillMaxWidth(), enabled = count > 0) {
                 Game.update { Game.engine.setRepresentative(it, s.regionIndex, badge) }
-                msg = "지역 대표로 지정했어요"
+                msg = "대표 배지로 정했어요"
             }
-            if (badge.tier == Tier.BRONZE) Note("합성에 쓸 수 있는 같은 도안 동 ${max(0, state.available(badge))} / ${SYNTH_COST}개")
+            if (badge.tier == Tier.BRONZE) Note("합성할 수 있는 같은 도안 동 ${max(0, state.available(badge))} / ${SYNTH_COST}개")
             HorizontalDivider(color = LINE)
             Info(
-                "획득 조건",
+                "받는 방법",
                 when (badge.tier) {
-                    Tier.BRONZE -> "이 지역 등재 충전소에서 충전율 +${MIN_SOC_GAIN}%p 이상 충전 (${pct(1 - GOLD_CHANCE)})"
-                    Tier.SILVER -> "같은 도안 동 ${SYNTH_COST}개를 [합성하기]"
-                    Tier.GOLD -> "이 지역 등재 충전소에서 충전할 때 ${pct(GOLD_CHANCE)} 확률"
+                    Tier.BRONZE -> "이 지역 공공 충전소에서 배터리를 ${MIN_SOC_GAIN}% 이상 충전하면 ${pct(1 - GOLD_CHANCE)} 확률"
+                    Tier.SILVER -> "같은 도안 동 ${SYNTH_COST}개를 합성"
+                    Tier.GOLD -> "이 지역 공공 충전소에서 충전할 때 ${pct(GOLD_CHANCE)} 확률"
                     Tier.LIMITED -> WOLF_RULE
                 },
             )
-            Info("획득 경로") {
+            Info("받은 경로") {
                 if (acquired.isEmpty()) InfoText("아직 없어요")
                 else FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Source.entries.forEach { src ->
@@ -601,9 +607,9 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
                     }
                 }
             }
-            Info("소장 수량", "${count}개" + if (state.locked(badge) > 0) " · 교환 제안 중 ${state.locked(badge)}개 잠금" else "")
+            Info("가진 개수", "${count}개" + if (state.locked(badge) > 0) " · 교환 제안에 ${state.locked(badge)}개 잠김" else "")
             Info("처음 얻은 날", acquired.minOfOrNull { it.timeMillis }?.let { date(it).toString() } ?: "아직 없어요")
-            Info("지역 칸", idx.region(s.regionIndex).name)
+            Info("지역", idx.region(s.regionIndex).name)
             Spacer(Modifier.height(80.dp))
         }
     }
@@ -683,7 +689,7 @@ private fun Modifier.burst(accent: Color, glow: Color) = drawBehind {
 fun AcquiredScreen(onDone: () -> Unit) {
     val idx = Game.index
     val state = Game.state
-    val rec = state.charges.lastOrNull() ?: return Column(Modifier.padding(PAGE)) { StateCard("충전 확인 대기", "아직 받은 배지가 없어요.") }
+    val rec = state.charges.lastOrNull() ?: return Column(Modifier.padding(PAGE)) { StateCard("충전을 기다리는 중", "아직 받은 배지가 없어요.") }
     val b = rec.badge
     val left = SYNTH_COST - state.available(Badge(b.design, Tier.BRONZE))
     val accent = MaterialTheme.colorScheme.primary
@@ -702,7 +708,7 @@ fun AcquiredScreen(onDone: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Eyebrow("${rec.station.name} · ${rec.date}", Modifier.enter(0))
         Spacer(Modifier.height(10.dp))
-        Text("이번 충전의 기록이 더해졌어요", Modifier.enter(80), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT, textAlign = TextAlign.Center)
+        Text("충전이 확인됐어요", Modifier.enter(80), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT, textAlign = TextAlign.Center)
         Spacer(Modifier.weight(1f))
         Box(Modifier.size(460.dp), contentAlignment = Alignment.Center) {
             Box(
@@ -726,16 +732,16 @@ fun AcquiredScreen(onDone: () -> Unit) {
                 }.shine { sweep.value },
             )
         }
-        Text("${shortArt(idx, b.design.artKey)} · ${tierColorName(b.tier)} +1", Modifier.enter(560), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+        Text("${shortArt(idx, b.design.artKey)} · ${designName(b.design)}", Modifier.enter(560), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
         Spacer(Modifier.height(6.dp))
-        Sub(designName(b.design), Modifier.enter(620))
+        Sub("${tierLabel(b.tier)} 배지 1개를 받았어요", Modifier.enter(620))
         Spacer(Modifier.height(18.dp))
         Box(Modifier.enter(700)) {
             AccentChip(
                 when {
                     b == WOLF -> "12월 대전 한정 배지예요"
                     b.tier == Tier.GOLD -> "${pct(GOLD_CHANCE)} 확률로 나온 금 배지예요"
-                    left > 0 -> "은까지 같은 도안 동 ${left}개"
+                    left > 0 -> "동 ${left}개 더 모으면 은으로 합성할 수 있어요"
                     else -> "지금 은으로 합성할 수 있어요"
                 },
             )
@@ -743,7 +749,7 @@ fun AcquiredScreen(onDone: () -> Unit) {
         Spacer(Modifier.weight(1f))
         Btn("확인", Modifier.widthIn(min = 520.dp).enter(820), onClick = onDone)
         Spacer(Modifier.height(16.dp))
-        Note("같은 충전소는 하루 한 번만 판정해요 · 금 배지는 충전할 때마다 ${pct(GOLD_CHANCE)} 확률", Modifier.enter(880))
+        Note("같은 충전소에서는 하루에 한 번만 받을 수 있어요 · 금 배지는 충전할 때마다 ${pct(GOLD_CHANCE)} 확률로 나와요", Modifier.enter(880))
     }
 }
 
@@ -752,7 +758,7 @@ fun AcquiredScreen(onDone: () -> Unit) {
 fun ChargingScreen(onDone: () -> Unit) {
     val idx = Game.index
     val state = Game.state
-    val rec = state.charges.lastOrNull() ?: return Column(Modifier.padding(PAGE)) { StateCard("충전 확인 대기", "충전 기록이 없어요.") }
+    val rec = state.charges.lastOrNull() ?: return Column(Modifier.padding(PAGE)) { StateCard("충전을 기다리는 중", "아직 충전 기록이 없어요.") }
     val available = max(0, state.available(Badge(rec.badge.design, Tier.BRONZE)))
     val soc = Game.soc
     val accent = MaterialTheme.colorScheme.primary
@@ -760,7 +766,7 @@ fun ChargingScreen(onDone: () -> Unit) {
         val wide = maxWidth >= 1200.dp
         val gauge: @Composable (Modifier) -> Unit = { m ->
             Column(m.glass().cornerGlow(accent).padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Eyebrow(if (Game.charging) "충전 중" else "충전 끝남 · 마지막 충전", Modifier.fillMaxWidth())
+                Eyebrow(if (Game.charging) "충전 중" else "충전 완료 · 마지막 충전", Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
                 Text(rec.station.name, Modifier.fillMaxWidth(), fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
                 Sub(idx.region(rec.station.regionIndex).name, Modifier.fillMaxWidth())
@@ -777,11 +783,11 @@ fun ChargingScreen(onDone: () -> Unit) {
                             },
                             label = "soc",
                         ) { v -> Text(v?.toString() ?: "--", fontSize = 96.sp, lineHeight = 100.sp, fontWeight = FontWeight.ExtraBold, color = TXT) }
-                        Text("% 충전율", fontSize = 22.sp, color = SUB)
+                        Text("% 배터리", fontSize = 22.sp, color = SUB)
                     }
                 }
                 Spacer(Modifier.height(24.dp))
-                Note("충전율은 차량이 측정한 값이에요")
+                Note("차량에서 직접 읽은 배터리 잔량이에요")
             }
         }
         val bar = remember { Animatable(0f) }
@@ -795,7 +801,7 @@ fun ChargingScreen(onDone: () -> Unit) {
                         Text("${shortArt(idx, rec.badge.design.artKey)} · ${designName(rec.badge.design)}", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TierTag(rec.badge.tier)
-                            Sub("${rec.date} 획득")
+                            Sub("${rec.date}에 받음")
                         }
                     }
                 }
@@ -808,7 +814,7 @@ fun ChargingScreen(onDone: () -> Unit) {
                         color = accent,
                         trackColor = Color(0x14FFFFFF),
                     )
-                    Note("같은 도안 동 ${SYNTH_COST}개를 모으면 도감에서 [합성하기]로 은 1개를 만들 수 있어요")
+                    Note("같은 도안 동 ${SYNTH_COST}개를 모으면 도감에서 은 1개로 합성할 수 있어요")
                 }
                 if (fill) Spacer(Modifier.weight(1f))
                 Btn("도감에서 보기", Modifier.fillMaxWidth().height(84.dp), onClick = onDone)
@@ -836,7 +842,7 @@ fun FriendsScreen(go: (Screen) -> Unit) {
             Heading("친구 ${state.friends.size}명", Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedTextField("", {}, enabled = false, label = { Text("친구 코드") }, colors = darkFieldColors(), shape = RoundedCornerShape(16.dp), modifier = Modifier.width(320.dp).heightIn(min = 76.dp))
-                Note("친구 코드 입력은 서버 연동 후 열려요")
+                Note("친구 코드로 추가하는 기능은 준비 중이에요")
             }
         }
         BoxWithConstraints {
@@ -920,17 +926,17 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
         val wide = maxWidth >= 1200.dp
         val well = if (wide) 220.dp else 160.dp
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(PAGE), verticalArrangement = GAP) {
-            if (offers.isEmpty()) Header("${friend.name}와 교환", "동끼리 1:1 · 내 동 하나와 친구 동 하나를 골라요", onClose)
-            else Header("교환할 배지를 확인해 주세요", "${friend.name} 확인 완료 · 내 확인을 기다리고 있어요", onClose)
+            if (offers.isEmpty()) Header("${withGwa(friend.name)} 교환", "동끼리 1:1 · 내 동 하나와 친구 동 하나를 골라요", onClose)
+            else Header("교환할 배지를 확인해 주세요", "${friend.name}님이 확인했어요 · 내 확인만 남았어요", onClose)
             offers.forEach { t ->
                 val days = (TRADE_EXPIRY_MS - (Game.nowMillis() - t.createdMillis)) / 86_400_000 + 1
                 Column(Modifier.fillMaxWidth().glass().cornerGlow(accent).padding(36.dp), verticalArrangement = GAP) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        SwapSlot(t.give, "내가 보내는 배지", "교환 뒤 내 수량 ${state.count(t.give) - 1}개", Modifier.weight(1f), well)
+                        SwapSlot(t.give, "내가 보내는 배지", "교환하면 ${state.count(t.give) - 1}개 남아요", Modifier.weight(1f), well)
                         FlowArrows(Modifier.size(if (wide) 180.dp else 96.dp, 110.dp), active = true)
-                        SwapSlot(t.want, "내가 받는 배지", "획득 출처는 교환으로 표시", Modifier.weight(1f), well)
+                        SwapSlot(t.want, "내가 받는 배지", "교환으로 받은 배지로 표시돼요", Modifier.weight(1f), well)
                     }
-                    Sub("제안 내용이 바뀌면 양쪽 확인을 다시 받아요 · ${days}일 뒤 자동 만료")
+                    Sub("제안이 바뀌면 둘 다 다시 확인해야 해요 · ${days}일 뒤 자동으로 취소돼요")
                     Row(horizontalArrangement = GAP, verticalAlignment = Alignment.CenterVertically) {
                         OutlineBtn("제안 취소") {
                             Game.update { Game.engine.cancelTrade(it, t.id) }
@@ -948,9 +954,9 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
                 Heading("새 교환 제안")
                 // The swap at a glance; picking a badge below pops it into its slot.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    SwapSlot(give, "내가 보낼 배지", if (give == null) "아래 내 배지에서 골라요" else "보내면 내 수량 ${state.count(give!!)}개 → ${state.count(give!!) - 1}개", Modifier.weight(1f), well)
+                    SwapSlot(give, "내가 보낼 배지", if (give == null) "아래 내 배지에서 골라요" else "보내면 내 개수 ${state.count(give!!)}개 → ${state.count(give!!) - 1}개", Modifier.weight(1f), well)
                     FlowArrows(Modifier.size(if (wide) 180.dp else 96.dp, 110.dp), active = give != null && want != null)
-                    SwapSlot(want, "받을 배지", if (want == null) "아래 ${friend.name}의 배지에서 골라요" else "획득 출처는 교환으로 표시", Modifier.weight(1f), well)
+                    SwapSlot(want, "받을 배지", if (want == null) "아래 ${friend.name}의 배지에서 골라요" else "교환으로 받은 배지로 표시돼요", Modifier.weight(1f), well)
                 }
                 Btn("교환 제안하기", Modifier.align(Alignment.CenterHorizontally).widthIn(min = if (wide) 480.dp else 300.dp), enabled = give != null && want != null) {
                     msg = runCatching {
@@ -964,13 +970,13 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
                 val myPicker: @Composable (Modifier) -> Unit = { m ->
                     Column(m, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("내 배지", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
-                        if (mine.isEmpty()) Sub("소장한 배지가 없어요")
+                        if (mine.isEmpty()) Sub("가진 배지가 없어요")
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             mine.forEach { b ->
                                 val ok = b.tier == Tier.BRONZE && state.available(b) > 0
                                 val note = when {
-                                    b.tier != Tier.BRONZE -> "동만 교환"
-                                    state.locked(b) > 0 -> "잠금 ${state.locked(b)}"
+                                    b.tier != Tier.BRONZE -> "동만 교환 가능"
+                                    state.locked(b) > 0 -> "${state.locked(b)}개 잠김"
                                     else -> null
                                 }
                                 BadgeSlot(b, state.count(b), well = 112.dp, selected = give == b, enabled = ok, note = note) { give = b }
@@ -1069,7 +1075,7 @@ fun TreeScreen() {
     var savedVersion by remember { mutableStateOf(0) }
     val treeTime by rememberInfiniteTransition(label = "tree").animateFloat(0f, 1f, infiniteRepeatable(tween(60_000, easing = LinearEasing)), label = "treeTime")
     val title = "${today.year}, 나의 충전 여행"
-    val sub = "올해의 기억을 골라 트리에 걸어보세요"
+    val sub = "올해의 기억을 골라 트리에 걸어 보세요"
     val onSet: (Int, Badge?) -> Unit = { slot, b ->
         msg = runCatching {
             Game.update { setTreeSlot(it, today, slot, b) }
@@ -1153,9 +1159,9 @@ fun TreeScreen() {
 @Composable
 private fun OrnamentCard(count: Int, modifier: Modifier) {
     GlassCard(modifier.widthIn(min = 320.dp).background(Color(0x99070B14), RoundedCornerShape(28.dp))) {
-        Heading("올해의 오너먼트")
+        Heading("올해의 트리 장식")
         Text("올해 고른 배지 ${count}개 / $TREE_SLOTS", fontSize = 24.sp, color = TXT)
-        Note("12월 편집 · 연도별 보관")
+        Note("12월에 꾸미고, 해마다 따로 보관돼요")
     }
 }
 
@@ -1167,7 +1173,7 @@ private fun TreeEditor(modifier: Modifier, slots: List<Badge?>, picking: Int?, o
     val accent = MaterialTheme.colorScheme.primary
     Column(modifier.padding(32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("오너먼트 고르기", Modifier.weight(1f), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
+            Text("트리 장식 고르기", Modifier.weight(1f), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = TXT)
             CloseBtn(onClose)
         }
         for (i in 0 until TREE_SLOTS) {
@@ -1183,7 +1189,7 @@ private fun TreeEditor(modifier: Modifier, slots: List<Badge?>, picking: Int?, o
             ) {
                 Medal(b ?: Badge(Design("", 0), Tier.BRONZE), 60.dp, owned = b != null)
                 Column(Modifier.weight(1f)) {
-                    Text("오너먼트 ${i + 1}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
+                    Text("장식 ${i + 1}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TXT)
                     Note(b?.let { badgeName(idx, it) } ?: "비어 있음")
                 }
                 OutlineBtn("바꾸기") { onPick(i) }
@@ -1191,7 +1197,7 @@ private fun TreeEditor(modifier: Modifier, slots: List<Badge?>, picking: Int?, o
         }
         picking?.let { slot ->
             HorizontalDivider(color = LINE)
-            Heading("오너먼트 ${slot + 1}에 넣을 배지")
+            Heading("장식 ${slot + 1}에 걸 배지")
             OutlineBtn("비우기") { onSet(slot, null) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 state.owned.keys.sortedWith(compareByDescending<Badge> { it.tier }.thenBy { it.design.artKey }.thenBy { it.design.number }).forEach { b ->

@@ -542,8 +542,6 @@ fun tierLabel(t: Tier) = when (t) {
     Tier.LIMITED -> "한정"
 }
 
-fun tierColorName(t: Tier) = if (t == Tier.LIMITED) tierLabel(t) else tierLabel(t) + "색"
-
 /** 동/은/금 chip: the tier is always spelled out, never shown by color alone. */
 @Composable
 fun TierTag(t: Tier) {

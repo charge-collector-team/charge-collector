@@ -114,7 +114,7 @@ class ChargeService : Service() {
         super.onCreate()
         charging = false
         val notification = Notification.Builder(this, "service")
-            .setContentTitle("충전 감지 중")
+            .setContentTitle("충전을 확인하고 있어요")
             .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
             .build()
         startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
