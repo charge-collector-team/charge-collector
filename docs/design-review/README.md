@@ -1,8 +1,9 @@
 # 기존 화면 구성 + Pleos 스타일 검토
 
-**main에 바로 합치지 않고, 이 문서의 전후 캡처와 실행 결과를 검토한 뒤 머지하는 브랜치입니다.**
+**스타일 변경 PR #2는 main의 `c271245`에 머지되었습니다. 이 문서의 전후 캡처는 해당 스타일 변경 기록입니다. 이후 선택한 교환 클립은 앱 미적용 자료이며 별도 후속 PR에서 검토합니다.**
 
-- 브랜치: `codex/pleos-style-preview`
+- 기존 스타일 브랜치: `codex/pleos-style-preview`
+- 교환 클립 후속 브랜치: `codex/exchange-clip-selected`
 - 기준 main: `491117e25522bf6cf6e9566650886809ca342750`
 - 변경 전: 해당 main에 포함된 `release/charge-collector-v0.1.apk` 실행 화면.
 - 변경 후: 이 브랜치 소스로 빌드한 APK 실행 화면.
@@ -19,7 +20,7 @@
 
 ## 라벨 시안과 기술 검토 분리
 
-[교환 키링·한정 에디션 시안](label-proposal.md)은 **앱 미적용 디자인 제안**입니다. 기각된 사각 명패안은 포함하지 않습니다. [보유 출처의 기술 검토 PR #3](https://github.com/charge-collector-team/charge-collector/pull/3)은 별도 브랜치의 문서이며, 이 디자인 PR에는 기능·데이터 변경을 넣지 않습니다.
+[교환 표식 선택안: 3번 곡선 클립](label-proposal.md)은 **형태 선택 완료·앱 미적용 디자인 자료**입니다. 확대 PNG와 SVG·생성 소스를 포함하며, 매달린 키링 대신 테두리에 밀착하는 클립을 사용합니다. 이전 키링·한정 전용 프레임 보드는 과거 제안 기록입니다. [보유 출처의 기술 검토 PR #3](https://github.com/charge-collector-team/charge-collector/pull/3)은 별도 브랜치의 문서이며, 이 디자인 PR에는 기능·데이터 변경을 넣지 않습니다.
 
 ## 변경 범위
 
