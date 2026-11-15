@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -224,7 +225,7 @@ private fun SilverProgress(have: Int, modifier: Modifier = Modifier) {
 /** Accent ring that fills up to [progress] when shown; its glow breathes while [pulse]. */
 @Composable
 private fun ProgressRing(size: Dp, progress: Float, pulse: Boolean = false, content: @Composable () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = HIGHLIGHT
     val track = LINE
     val fill = remember { Animatable(0f) }
     LaunchedEffect(progress) { fill.animateTo(progress.coerceIn(0f, 1f), tween(1100, easing = Emphasized)) }
@@ -351,7 +352,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                     Box {
                         Medal(shown, w, owned = n > 0)
-                        if (n > 0) CountChip(n, Modifier.align(Alignment.BottomStart))
+                        if (n > 0) CountChip(n, w, Modifier.align(Alignment.BottomStart).offset(x = (-6).dp))
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(designName(shown.design), fontSize = 34.sp, fontWeight = FontWeight.Bold, color = if (n > 0) TXT else SUB, maxLines = 1)
@@ -489,7 +490,7 @@ private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListSt
 
 @Composable
 private fun RegionRow(label: String, trailing: String, selected: Boolean, onClick: () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = HIGHLIGHT
     val shape = RoundedCornerShape(18.dp)
     val bg by animateColorAsState(if (selected) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant, tween(220), label = "rowBg")
     val edge by animateColorAsState(if (selected) accent else LINE, tween(220), label = "rowEdge")
@@ -582,6 +583,8 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
             }
             Box(
                 Modifier.fillMaxWidth().height(medal + 56.dp).drawBehind {
+                    // A badge not got yet is drawn grey with no glow: a tier glow behind it reads as fog.
+                    if (count == 0) return@drawBehind
                     val r = medal.toPx() * 0.85f
                     val c = Offset(center.x, center.y + 12.dp.toPx())
                     drawCircle(Brush.radialGradient(0f to glow.copy(alpha = 0.28f), 1f to Color.Transparent, center = c, radius = r), r, c)
@@ -937,7 +940,7 @@ private fun FriendCard(f: Friend, pending: Int, modifier: Modifier, onTrade: () 
         }
         Note("바꿀 수 있는 동 배지 ${f.badges.filterKeys { it.tier == Tier.BRONZE }.values.sum()}개")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            f.badges.forEach { (b, n) -> BadgeSlot(b, n, owned = true, well = 96.dp) }
+            f.badges.forEach { (b, n) -> BadgeSlot(b, n, owned = true, well = 96.dp, bare = true) }
         }
         if (pending > 0) Btn("제안 확인하기", Modifier.fillMaxWidth(), onClick = onTrade) else OutlineBtn("교환하기", Modifier.fillMaxWidth(), onClick = onTrade)
     }
