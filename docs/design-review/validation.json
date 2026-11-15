@@ -1,0 +1,62 @@
+{
+  "base_main": "491117e25522bf6cf6e9566650886809ca342750",
+  "branch": "codex/pleos-style-preview",
+  "capture_date": "2026-11-15",
+  "sample_date": "2026-12-03",
+  "core_tests": [
+    {
+      "name": "kr.chargebadge.core.BadgeEngineTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "kr.chargebadge.core.CalendarAndJsonTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "kr.chargebadge.core.ChargeDetectorTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "kr.chargebadge.core.KoreaMapTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "kr.chargebadge.core.SampleTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "kr.chargebadge.core.StationsTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0"
+    }
+  ],
+  "release_build": "passed",
+  "lint_vital": "passed",
+  "source_sha256": {
+    "app/src/main/java/kr/chargebadge/MainActivity.kt": "482212344756bf9349e736ff9abe7286b3ce6a8f65024d7c778ab727329d6fa3",
+    "app/src/main/java/kr/chargebadge/Screens.kt": "270608a3a3023e00eec092f7b4ac8a41c42b73c0784f2261e8bc6a8e9ce65be5",
+    "app/src/main/java/kr/chargebadge/Images.kt": "2b07b25c0e010d98c51f00cdf47486ca83b8d37defc13574283971b8fb1b8672"
+  },
+  "apk_sha256": "d44d64f38ed3f350292f18ecd45dac9f809c6c9c2499c9531757bdad44c1c096",
+  "capture_pairs": 13,
+  "additional_capture": "after-detail-closed.png",
+  "not_verified": [
+    "real vehicle",
+    "trade server",
+    "driving restriction screenshot"
+  ],
+  "visual_revision": "oversized medal shadow removed",
+  "after_screenshots_recaptured": 14,
+  "original_medal_assets_changed": false
+}

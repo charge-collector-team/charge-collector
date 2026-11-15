@@ -53,7 +53,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,6 +69,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -78,6 +79,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -234,7 +237,7 @@ class MainActivity : ComponentActivity() {
                             Screen.Charging -> ChargingScreen { stack.clear(); stack += Screen.Collection }
                             Screen.Friends -> FriendsScreen(go)
                             is Screen.Trade -> TradeScreen(screen.friendId, back)
-                            Screen.Tree -> TreeScreen()
+                            Screen.Tree -> DisplaySurface { TreeScreen() }
                             Screen.Anniversary -> AnniversaryScreen()
                         }
                     }
@@ -244,41 +247,47 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Night showcase palette (mock A).
-val BG0 = Color(0xFF070B14)
-val BG1 = Color(0xFF0E1626)
-val LINE = Color(0x14FFFFFF)
-val TXT = Color(0xFFEEF2F8)
-val SUB = Color(0xFF8A97AD)
-val GOLD = Color(0xFFE8C66A)
-/** Text on the accent gradient. */
-val INK = Color(0xFF04121F)
-/** Inner ring of medals and count chips. */
-val NAVY = Color(0xFF0B2350)
+// 승인된 Pleos 중립색: 화면 바탕과 메달 진열면의 역할을 분리한다.
+val BG0 = Color(0xFFF7F8FA)
+val BG1 = Color(0xFFF7F8FA)
+val LINE: Color @Composable get() = MaterialTheme.colorScheme.outline
+val TXT: Color @Composable get() = MaterialTheme.colorScheme.onSurface
+val SUB: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val GOLD = Color(0xFFB39459)
+val INK = Color.White
+val NAVY = Color(0xFF44464E)
 
-private val GLOW = Color(0xFF18284A)
-private val ACCENT_START = Color(0xFF2C9BD1)
+// 함수명은 기존 호출을 유지하며, 장식용 파란 조명을 평평한 바탕으로 바꾼다.
+fun Modifier.nightBackdrop() = background(BG0)
 
-/** Top-right navy glow over a vertical night gradient. */
-fun Modifier.nightBackdrop() = drawBehind {
-    drawRect(Brush.verticalGradient(listOf(BG1, BG0)))
-    val c = Offset(size.width * 0.7f, size.height * 0.1f)
-    val r = 1200.dp.toPx()
-    scale(1f, 700f / 1200f, pivot = c) {
-        drawCircle(Brush.radialGradient(0f to GLOW, 0.6f to Color.Transparent, center = c, radius = r), r, c)
+// 기존 카드 크기와 배치는 유지하고, 불투명한 중립색 면과 테두리만 적용한다.
+@Composable
+fun Modifier.glass(radius: Dp = 32.dp): Modifier {
+    val shape = RoundedCornerShape(radius)
+    return clip(shape).background(MaterialTheme.colorScheme.surface).border(1.dp, LINE, shape)
+}
+
+// 검은 벨벳 진열면: 기존 패딩을 바꾸지 않고 프레임과 음영을 안쪽에 그린다.
+fun Modifier.case(radius: Dp = 32.dp): Modifier {
+    val shape = RoundedCornerShape(radius)
+    return shadow(8.dp, shape).clip(shape).background(Color(0xFF151618)).drawWithContent {
+        drawContent()
+        val edge = 9.dp.toPx()
+        drawRoundRect(Color(0xFF35363A), cornerRadius = CornerRadius(radius.toPx()), style = Stroke(edge))
+        drawLine(Color(0xFF66676C), Offset(radius.toPx(), edge / 2), Offset(size.width - radius.toPx(), edge / 2), 1.dp.toPx())
     }
 }
 
-/** Frosted card: faint white gradient, hairline border. */
-fun Modifier.glass(radius: Dp = 32.dp): Modifier {
-    val shape = RoundedCornerShape(radius)
-    return clip(shape).background(Brush.verticalGradient(listOf(Color(0x12FFFFFF), Color(0x05FFFFFF)))).border(1.dp, LINE, shape)
-}
-
-/** Dark display case. */
-fun Modifier.case(radius: Dp = 32.dp): Modifier {
-    val shape = RoundedCornerShape(radius)
-    return clip(shape).background(Brush.verticalGradient(listOf(Color(0xFF0F1A30), Color(0xFF0A1222)))).border(1.dp, LINE, shape)
+// 어두운 콘텐츠 영역에만 밝은 글자와 조작부를 공급한다. 앱의 상태·동작은 바꾸지 않는다.
+@Composable
+fun DisplaySurface(content: @Composable () -> Unit) {
+    val colors = MaterialTheme.colorScheme.copy(
+        primary = Color.White, onPrimary = Color(0xFF1D1E21),
+        surface = Color(0xFF26272B), surfaceVariant = Color(0xFF303137),
+        onSurface = Color(0xFFF7F8FA),
+        onSurfaceVariant = Color(0xFFB7B8BF), outline = Color(0xFF44464E),
+    )
+    MaterialTheme(colorScheme = colors, content = content)
 }
 
 private val TABS = listOf("도감" to Screen.Collection, "교환" to Screen.Friends, "1주년 기념" to Screen.Anniversary, "연말 회고" to Screen.Tree)
@@ -389,29 +398,36 @@ private fun Tab(label: String, active: Boolean, onSlot: (Rect) -> Unit, onClick:
 
 @Composable
 fun ChargeTheme(season: Season, content: @Composable () -> Unit) {
-    // One night theme; the season only nudges the accent hue.
-    val accent = when (season) {
-        Season.SPRING -> Color(0xFF4CC0DC)
-        Season.SUMMER -> Color(0xFF3FB6E8)
-        Season.AUTUMN -> Color(0xFF3FB6E8)
-        Season.WINTER -> Color(0xFF62C2F0)
-    }
+    // 계절 표현은 콘텐츠에 남기고 공통 조작부는 같은 중립색을 사용한다.
+    val accent = Color(0xFF44464E)
     val t = Typography()
     val typography = t.copy(
+        displayLarge = t.displayLarge.copy(fontFamily = TextFont),
+        displayMedium = t.displayMedium.copy(fontFamily = TextFont),
+        displaySmall = t.displaySmall.copy(fontFamily = TextFont),
+        headlineLarge = t.headlineLarge.copy(fontFamily = TextFont),
+        headlineMedium = t.headlineMedium.copy(fontFamily = TextFont),
+        headlineSmall = t.headlineSmall.copy(fontFamily = TextFont),
+        titleLarge = t.titleLarge.copy(fontFamily = TextFont),
+        titleMedium = t.titleMedium.copy(fontFamily = TextFont),
+        titleSmall = t.titleSmall.copy(fontFamily = TextFont),
+        labelMedium = t.labelMedium.copy(fontFamily = TextFont),
+        labelSmall = t.labelSmall.copy(fontFamily = TextFont),
         bodyLarge = t.bodyLarge.copy(fontFamily = TextFont, fontSize = 24.sp, lineHeight = 34.sp),
         bodyMedium = t.bodyMedium.copy(fontFamily = TextFont, fontSize = 24.sp, lineHeight = 34.sp),
         bodySmall = t.bodySmall.copy(fontFamily = TextFont, fontSize = 20.sp, lineHeight = 28.sp),
         labelLarge = t.labelLarge.copy(fontFamily = TextFont, fontSize = 24.sp),
     )
-    val colors = darkColorScheme(
+    val colors = lightColorScheme(
         primary = accent,
         onPrimary = INK,
         background = BG1,
-        onBackground = TXT,
-        surface = Color(0xFF0F1A30),
-        onSurface = TXT,
-        onSurfaceVariant = SUB,
-        outline = Color(0x2EFFFFFF),
+        onBackground = Color(0xFF1D1E21),
+        surface = Color.White,
+        surfaceVariant = Color(0xFFEDEEF2),
+        onSurface = Color(0xFF1D1E21),
+        onSurfaceVariant = Color(0xFF686A72),
+        outline = Color(0xFFE0E1E6),
     )
     // Everything (text, badges, spacing) is drawn UI_SCALE times larger so the screen is filled, not padded.
     val d = LocalDensity.current
@@ -423,25 +439,25 @@ fun ChargeTheme(season: Season, content: @Composable () -> Unit) {
 /** Below about 1.39 the 1672px-wide car split view drops under the 1200dp wide-layout breakpoint. */
 private const val UI_SCALE = 1.2f
 
-/** Primary action: accent gradient, dark bold label. */
+/** 주 동작은 불투명한 단색 면과 대비되는 글자로 표시한다. */
 @Composable
 fun Btn(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(16.dp)
     val accent = MaterialTheme.colorScheme.primary
     Box(
         modifier.heightIn(min = 80.dp).press(enabled, onClick = onClick).clip(shape)
-            .background(if (enabled) Brush.horizontalGradient(listOf(ACCENT_START, accent)) else SolidColor(Color(0x14FFFFFF)))
+            .background(if (enabled) accent else MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 36.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (enabled) INK else SUB, textAlign = TextAlign.Center) }
+    ) { Text(text, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = if (enabled) MaterialTheme.colorScheme.onPrimary else SUB, textAlign = TextAlign.Center) }
 }
 
 /** Secondary action: hairline outline, light label. */
 @Composable
 fun OutlineBtn(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(16.dp)
     Box(
-        modifier.heightIn(min = 76.dp).press(enabled, onClick = onClick).clip(shape).background(Color(0x0AFFFFFF)).border(2.dp, Color(0x2EFFFFFF), shape)
+        modifier.heightIn(min = 76.dp).press(enabled, onClick = onClick).clip(shape).background(MaterialTheme.colorScheme.surface).border(1.dp, LINE, shape)
             .padding(horizontal = 32.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) { Text(text, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = if (enabled) TXT else SUB.copy(alpha = 0.6f), textAlign = TextAlign.Center) }
@@ -451,12 +467,12 @@ fun OutlineBtn(text: String, modifier: Modifier = Modifier, enabled: Boolean = t
 @Composable
 fun Pill(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val bg by animateColorAsState(if (selected) TXT else TXT.copy(alpha = 0f), tween(220), label = "pill")
-    val fg by animateColorAsState(if (selected) Color(0xFF0A1222) else SUB, tween(220), label = "pillText")
+    val fg by animateColorAsState(if (selected) MaterialTheme.colorScheme.surface else SUB, tween(220), label = "pillText")
     Box(modifier.heightIn(min = 76.dp).press(role = Role.Tab, onClick = onClick), contentAlignment = Alignment.Center) {
         Box(
             Modifier.heightIn(min = 56.dp).widthIn(min = 84.dp).clip(CircleShape)
                 .background(bg)
-                .border(1.dp, Color(0x24FFFFFF), CircleShape)
+                .border(1.dp, LINE, CircleShape)
                 .padding(horizontal = 24.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -496,11 +512,12 @@ fun Header(title: String, sub: String? = null, onClose: (() -> Unit)? = null, ac
 
 @Composable
 fun CloseBtn(onClick: () -> Unit) {
-    Box(Modifier.size(76.dp).press(onClick = onClick).clip(CircleShape).background(Color(0x0FFFFFFF)), contentAlignment = Alignment.Center) {
+    val iconColor = TXT
+    Box(Modifier.size(76.dp).press(onClick = onClick).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(26.dp)) {
             val w = 3.dp.toPx()
-            drawLine(TXT, Offset(0f, 0f), Offset(size.width, size.height), w, StrokeCap.Round)
-            drawLine(TXT, Offset(size.width, 0f), Offset(0f, size.height), w, StrokeCap.Round)
+            drawLine(iconColor, Offset(0f, 0f), Offset(size.width, size.height), w, StrokeCap.Round)
+            drawLine(iconColor, Offset(size.width, 0f), Offset(0f, size.height), w, StrokeCap.Round)
         }
     }
 }
@@ -541,7 +558,7 @@ fun Toast(msg: String, modifier: Modifier = Modifier) {
         Text(
             msg,
             Modifier.clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.primary).padding(horizontal = 28.dp, vertical = 18.dp),
-            color = INK, fontSize = 24.sp, fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onPrimary, fontSize = 24.sp, fontWeight = FontWeight.Medium,
         )
     }
 }
@@ -577,11 +594,10 @@ fun Medal(badge: Badge, width: Dp, owned: Boolean = true, modifier: Modifier = M
 
 /** "×3" on a medal's bottom-left. */
 @Composable
-fun CountChip(count: Int, modifier: Modifier = Modifier) = Text(
+fun CountChip(count: Int, modifier: Modifier = Modifier, color: Color = Color.Unspecified) = Text(
     "×$count",
-    modifier.clip(CircleShape).background(Color(0xFF0F1A30)).padding(3.dp)
-        .clip(CircleShape).background(NAVY).padding(horizontal = 10.dp, vertical = 1.dp),
-    fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = Color.White,
+    modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+    fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = if (color == Color.Unspecified) TXT else color,
 )
 
 /** Dashed empty circle: a slot nothing has been picked for yet. */
@@ -597,17 +613,26 @@ fun EmptySlot(size: Dp) {
 
 /** Recessed round slot a medal sits in. */
 @Composable
-fun Well(size: Dp, content: @Composable () -> Unit) {
+fun Well(size: Dp, selected: Boolean = false, selectionColor: Color = Color.White, content: @Composable () -> Unit) {
     Box(
         Modifier.size(size).drawBehind {
             val r = this.size.minDimension / 2
-            drawCircle(Brush.radialGradient(0f to Color(0xFF16233F), 0.7f to Color(0xFF0A1120), center = Offset(center.x, center.y - r * 0.2f), radius = r), r)
+            drawCircle(Brush.radialGradient(0f to Color(0xFF252629), 0.7f to Color(0xFF121315), center = Offset(center.x, center.y - r * 0.2f), radius = r), r)
             // inset shadow from the top edge, faint light on the bottom lip
             drawCircle(Brush.radialGradient(0.72f to Color.Transparent, 1f to Color(0xB3000000), center = Offset(center.x, center.y + r * 0.12f), radius = r * 1.12f), r)
             drawArc(Color(0x0DFFFFFF), 30f, 120f, false, Offset(center.x - r + 1f, center.y - r + 1f), androidx.compose.ui.geometry.Size(r * 2 - 2f, r * 2 - 2f), style = Stroke(2.dp.toPx()))
         },
         contentAlignment = Alignment.Center,
-    ) { content() }
+    ) {
+        content()
+        if (selected) Canvas(Modifier.fillMaxSize()) {
+            val r = this.size.width * 0.89f / 2f
+            val c = center
+            val disc = Path().apply { addOval(Rect(c, r)) }
+            val loop = Path().apply { addOval(Rect(c.x - r * 0.19f, c.y - r * 1.32f, c.x + r * 0.19f, c.y - r * 0.86f)) }
+            drawPath(Path.combine(PathOperation.Union, disc, loop), selectionColor, style = Stroke(5.dp.toPx()))
+        }
+    }
 }
 
 /** Showcase slot: medal in a well with the count at its bottom left, then "지역 · 도안". */
@@ -625,19 +650,16 @@ fun BadgeSlot(
     onClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(26.dp)
-    val accent = MaterialTheme.colorScheme.primary
-    val ring by animateColorAsState(if (selected) accent else accent.copy(alpha = 0f), tween(220), label = "slot")
     Column(
         (if (onClick != null) Modifier.press(enabled, onClick = onClick) else Modifier)
             .alpha(if (enabled) 1f else 0.4f)
             .clip(shape)
-            .background(ring.copy(alpha = ring.alpha * 0.08f)).border(3.dp, ring, shape)
             .padding(start = 6.dp, end = 6.dp, top = 22.dp, bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box {
-            Well(well) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
-            if (owned && count > 0) CountChip(count, Modifier.align(Alignment.BottomStart).offset(x = 4.dp, y = (-4).dp))
+            Well(well, selected = selected, selectionColor = TXT) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
+            if (owned && count > 0) CountChip(count, Modifier.align(Alignment.BottomStart).offset(x = 4.dp, y = (-4).dp), color = Color.White)
         }
         Spacer(Modifier.height(16.dp))
         // Slot labels are narrow: "잠실 롯데타워" shows as "롯데타워" (as in the mock), but "도안 2" stays whole.
