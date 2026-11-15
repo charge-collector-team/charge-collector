@@ -225,6 +225,7 @@ private fun SilverProgress(have: Int, modifier: Modifier = Modifier) {
 @Composable
 private fun ProgressRing(size: Dp, progress: Float, pulse: Boolean = false, content: @Composable () -> Unit) {
     val accent = MaterialTheme.colorScheme.primary
+    val track = LINE
     val fill = remember { Animatable(0f) }
     LaunchedEffect(progress) { fill.animateTo(progress.coerceIn(0f, 1f), tween(1100, easing = Emphasized)) }
     val breath = if (pulse) rememberInfiniteTransition(label = "ring").animateFloat(0f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "breath") else null
@@ -237,7 +238,7 @@ private fun ProgressRing(size: Dp, progress: Float, pulse: Boolean = false, cont
             val halo = r * (1.2f + 0.06f * b)
             drawCircle(Brush.radialGradient(0.78f to accent.copy(alpha = 0.08f + 0.24f * p + 0.2f * b), 1f to Color.Transparent, radius = halo), halo)
             drawCircle(BG1, r)
-            drawCircle(Color(0x14FFFFFF), r - stroke / 2, style = Stroke(stroke))
+            drawCircle(track, r - stroke / 2, style = Stroke(stroke))
             if (p > 0f) drawArc(accent, -90f, 360f * p, false, Offset(stroke / 2, stroke / 2), Size(2 * r - stroke, 2 * r - stroke), style = Stroke(stroke, cap = StrokeCap.Round))
             drawCircle(BG1, r - stroke)
         },
@@ -246,11 +247,7 @@ private fun ProgressRing(size: Dp, progress: Float, pulse: Boolean = false, cont
 }
 
 /** Accent glow at the top-right corner of the hero-style cards. */
-private fun Modifier.cornerGlow(accent: Color) = drawBehind {
-    val c = Offset(size.width * 0.8f, -size.height * 0.14f)
-    val r = 360.dp.toPx()
-    drawCircle(Brush.radialGradient(0f to accent.copy(alpha = 0.25f), 0.6f to Color.Transparent, center = c, radius = r), r, c)
-}
+private fun Modifier.cornerGlow(accent: Color): Modifier = this
 
 // S4
 @Composable
@@ -277,19 +274,19 @@ fun CollectionScreen(go: (Screen) -> Unit, detail: Screen.Detail? = null, onClos
                     }
                 }
                 AnimatedContent(if (regionMode) shown else "showcase", Modifier.weight(1f).fillMaxHeight().case(), { fadeThrough() }, label = "case") { k ->
-                    when (k) {
+                    DisplaySurface { when (k) {
                         is Int -> RegionCase(idx.region(k), go, detail?.badge, null)
                         null -> Column(Modifier.padding(36.dp)) { Header("시·군·구를 골라 주세요", "고르면 도안별 동·은·금 배지와 개수를 볼 수 있어요") }
                         else -> Showcase(filter, go, detail?.badge) { regionMode = true }
-                    }
+                    } }
                 }
             }
         } else {
             AnimatedContent(if (regionMode) selected ?: "list" else "showcase", Modifier.fillMaxSize(), { fadeThrough() }, label = "collection") { k ->
                 when (k) {
                     "list" -> RegionList(Modifier.fillMaxSize().padding(24.dp).glass(), null, listState, { selected = it }) { regionMode = false }
-                    is Int -> RegionCase(idx.region(k), go, null) { selected = null }
-                    else -> Showcase(filter, go, null, hero = { Hero(Modifier.fillMaxWidth(), go, openRegion, compact = true) }) { regionMode = true }
+                    is Int -> DisplaySurface { Box(Modifier.fillMaxSize().case()) { RegionCase(idx.region(k), go, null) { selected = null } } }
+                    else -> DisplaySurface { Box(Modifier.case()) { Showcase(filter, go, null, hero = { Hero(Modifier.fillMaxWidth(), go, openRegion, compact = true) }) { regionMode = true } } }
                 }
             }
         }
@@ -369,7 +366,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
                 state.owned.values.sum() to "모은 배지",
             ).forEach { (n, label) ->
                 Column(
-                    Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(Color(0x0DFFFFFF))
+                    Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(1.dp, LINE, RoundedCornerShape(20.dp)).padding(20.dp),
                 ) {
                     Text("$n", fontSize = 40.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = TXT)
@@ -494,7 +491,7 @@ private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListSt
 private fun RegionRow(label: String, trailing: String, selected: Boolean, onClick: () -> Unit) {
     val accent = MaterialTheme.colorScheme.primary
     val shape = RoundedCornerShape(18.dp)
-    val bg by animateColorAsState(if (selected) accent.copy(alpha = 0.14f) else Color(0x08FFFFFF), tween(220), label = "rowBg")
+    val bg by animateColorAsState(if (selected) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant, tween(220), label = "rowBg")
     val edge by animateColorAsState(if (selected) accent else LINE, tween(220), label = "rowEdge")
     Row(
         Modifier.fillMaxWidth().heightIn(min = 76.dp).press(onClick = onClick).clip(shape)
@@ -541,7 +538,7 @@ private fun RegionCase(region: Region, go: (Screen) -> Unit, selectedBadge: Badg
         charges.groupBy { it.station.id }.values.sortedByDescending { list -> list.maxOf { it.timeMillis } }.forEach { list ->
             val last = list.maxBy { it.timeMillis }
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0x08FFFFFF)).padding(16.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically,
             ) {
                 Medal(last.badge, 60.dp)
@@ -688,26 +685,30 @@ private fun AccentChip(text: String) {
 }
 
 /** Glow, faint rays and sparkles behind a medal at the moment it is won. */
-private fun Modifier.burst(accent: Color, glow: Color) = drawBehind {
-    val r = size.minDimension / 2
-    drawCircle(Brush.radialGradient(0f to glow.copy(alpha = 0.45f), 0.4f to accent.copy(alpha = 0.18f), 1f to Color.Transparent, radius = r), r)
-    for (i in 0 until 12) {
-        rotate(i * 30f) {
-            val ray = Path().apply {
-                moveTo(center.x - r * 0.03f, center.y)
-                lineTo(center.x, center.y - r)
-                lineTo(center.x + r * 0.03f, center.y)
-                close()
+@Composable
+private fun Modifier.burst(accent: Color, glow: Color): Modifier {
+    val sparkle = TXT
+    return drawBehind {
+        val r = size.minDimension / 2
+        drawCircle(Brush.radialGradient(0f to glow.copy(alpha = 0.45f), 0.4f to accent.copy(alpha = 0.18f), 1f to Color.Transparent, radius = r), r)
+        for (i in 0 until 12) {
+            rotate(i * 30f) {
+                val ray = Path().apply {
+                    moveTo(center.x - r * 0.03f, center.y)
+                    lineTo(center.x, center.y - r)
+                    lineTo(center.x + r * 0.03f, center.y)
+                    close()
+                }
+                drawPath(ray, Brush.verticalGradient(listOf(Color.Transparent, accent.copy(alpha = 0.10f)), center.y - r, center.y))
             }
-            drawPath(ray, Brush.verticalGradient(listOf(Color.Transparent, accent.copy(alpha = 0.10f)), center.y - r, center.y))
         }
-    }
-    listOf(20f to 0.82f, 75f to 0.7f, 140f to 0.88f, 200f to 0.74f, 255f to 0.86f, 320f to 0.72f).forEach { (deg, f) ->
-        val a = Math.toRadians(deg.toDouble())
-        val p = Offset(center.x + r * f * cos(a).toFloat(), center.y + r * f * sin(a).toFloat())
-        val s = r * 0.035f
-        drawLine(TXT.copy(alpha = 0.8f), Offset(p.x - s, p.y), Offset(p.x + s, p.y), s * 0.35f, StrokeCap.Round)
-        drawLine(TXT.copy(alpha = 0.8f), Offset(p.x, p.y - s), Offset(p.x, p.y + s), s * 0.35f, StrokeCap.Round)
+        listOf(20f to 0.82f, 75f to 0.7f, 140f to 0.88f, 200f to 0.74f, 255f to 0.86f, 320f to 0.72f).forEach { (deg, f) ->
+            val a = Math.toRadians(deg.toDouble())
+            val p = Offset(center.x + r * f * cos(a).toFloat(), center.y + r * f * sin(a).toFloat())
+            val s = r * 0.035f
+            drawLine(sparkle.copy(alpha = 0.8f), Offset(p.x - s, p.y), Offset(p.x + s, p.y), s * 0.35f, StrokeCap.Round)
+            drawLine(sparkle.copy(alpha = 0.8f), Offset(p.x, p.y - s), Offset(p.x, p.y + s), s * 0.35f, StrokeCap.Round)
+        }
     }
 }
 
@@ -820,7 +821,7 @@ fun ChargingScreen(onDone: () -> Unit) {
         val bar = remember { Animatable(0f) }
         LaunchedEffect(available) { bar.animateTo(min(1f, available / SYNTH_COST.toFloat()), tween(1000, delayMillis = 200, easing = Emphasized)) }
         val info: @Composable (Modifier, Boolean) -> Unit = { m, fill ->
-            Column(m.enter(120).case().padding(36.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            DisplaySurface { Column(m.enter(120).case().padding(36.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Eyebrow("이번에 받은 배지")
                 Row(Modifier.padding(vertical = 24.dp), horizontalArrangement = Arrangement.spacedBy(36.dp), verticalAlignment = Alignment.CenterVertically) {
                     Well(if (wide) 260.dp else 200.dp) { Medal(rec.badge, if (wide) 230.dp else 178.dp, loopSpace = false) }
@@ -838,14 +839,14 @@ fun ChargingScreen(onDone: () -> Unit) {
                     LinearProgressIndicator(
                         progress = { bar.value },
                         modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(7.dp)),
-                        color = accent,
-                        trackColor = Color(0x14FFFFFF),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = LINE,
                     )
                     Note("같은 도안 동 ${SYNTH_COST}개를 모으면 도감에서 은 1개로 합성할 수 있어요")
                 }
                 if (fill) Spacer(Modifier.weight(1f))
                 Btn("도감에서 보기", Modifier.fillMaxWidth().height(84.dp), onClick = onDone)
-            }
+            } }
         }
         if (wide) Row(Modifier.fillMaxSize().padding(horizontal = 56.dp, vertical = 40.dp), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
             gauge(Modifier.width(520.dp).fillMaxHeight())
@@ -913,10 +914,10 @@ private fun TradeSteps() {
 
 /** Avatar gradients; a friend keeps the same one. */
 private val AVATARS = listOf(
-    Color(0xFF2C9BD1) to Color(0xFF7FD6FF),
-    Color(0xFFE0705A) to Color(0xFFF7B08F),
-    Color(0xFFD9A93E) to Color(0xFFF5DA8A),
-    Color(0xFF3FB68F) to Color(0xFF9BE8CC),
+    Color(0xFFE0E1E6) to Color(0xFFE0E1E6),
+    Color(0xFFEDEEF2) to Color(0xFFEDEEF2),
+    Color(0xFFD4D5DC) to Color(0xFFD4D5DC),
+    Color(0xFFE0E1E6) to Color(0xFFE0E1E6),
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -926,7 +927,7 @@ private fun FriendCard(f: Friend, pending: Int, modifier: Modifier, onTrade: () 
     Column(modifier.glass().cornerGlow(c1).padding(28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Box(Modifier.size(84.dp).clip(CircleShape).background(Brush.linearGradient(listOf(c1, c2))), contentAlignment = Alignment.Center) {
-                Text(f.name.substringAfterLast(' ').take(1), fontSize = 34.sp, fontWeight = FontWeight.Bold, color = INK)
+                Text(f.name.substringAfterLast(' ').take(1), fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF44464E))
             }
             Column(Modifier.weight(1f)) {
                 Text(f.name, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TXT, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -984,7 +985,7 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
                     }
                 }
             }
-            Column(Modifier.fillMaxWidth().case(28.dp).padding(32.dp), verticalArrangement = GAP) {
+            DisplaySurface { Column(Modifier.fillMaxWidth().case(28.dp).padding(32.dp), verticalArrangement = GAP) {
                 Heading("새 교환 제안")
                 // The swap at a glance; picking a badge below pops it into its slot.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1035,6 +1036,7 @@ fun TradeScreen(friendId: String, onClose: () -> Unit) {
                     myPicker(Modifier)
                     friendPicker(Modifier)
                 }
+            }
             }
             Spacer(Modifier.height(72.dp))
         }
@@ -1177,7 +1179,7 @@ fun TreeScreen() {
                     },
                     onClose = { selected = null },
                     // Taps on the panel's blank parts stay in the panel instead of closing it.
-                    Modifier.fillMaxSize().background(Color(0xFF0A1222)).pointerInput(Unit) { detectTapGestures { } },
+                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).pointerInput(Unit) { detectTapGestures { } },
                 )
             }
         }
@@ -1187,7 +1189,7 @@ fun TreeScreen() {
 
 @Composable
 private fun OrnamentCard(count: Int, modifier: Modifier) {
-    GlassCard(modifier.widthIn(min = 320.dp).background(Color(0x99070B14), RoundedCornerShape(28.dp))) {
+    GlassCard(modifier.widthIn(min = 320.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(28.dp))) {
         Heading("올해의 트리 장식")
         Text("올해 고른 배지 ${count}개 / $TREE_SLOTS", fontSize = 24.sp, color = TXT)
         Note("12월에 꾸미고, 해마다 따로 보관돼요")
@@ -1383,9 +1385,9 @@ fun AnniversaryScreen() {
                 }
                 // It stops above the source credit line (the bottom 5% of the image) and scrolls if longer.
                 AnimatedContent(detail, Modifier.align(Alignment.TopEnd).fillMaxHeight(0.95f).fillMaxWidth(0.4f), { fadeThrough() }, label = "annivDetail") { d ->
-                    val night = Color(0xFF0A1222)
+                    val night = Color(0xFF151618)
                     val back = Brush.horizontalGradient(0f to night.copy(alpha = 0.55f), 0.1f to night.copy(alpha = 0.94f), 1f to night)
-                    if (d != null) DetailCard(d, { selected = null; animateTo(1f, Offset.Zero) }, Modifier.fillMaxSize().background(back), medal = 104.dp)
+                    if (d != null) DisplaySurface { DetailCard(d, { selected = null; animateTo(1f, Offset.Zero) }, Modifier.fillMaxSize().background(back), medal = 104.dp) }
                 }
                 // The map's source credit stays on top, details or not.
                 Canvas(Modifier.fillMaxSize()) { drawAnniversarySource() }
@@ -1400,12 +1402,12 @@ fun AnniversaryScreen() {
 
 @Composable
 private fun darkFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = Color(0x0DFFFFFF),
-    unfocusedContainerColor = Color(0x08FFFFFF),
-    disabledContainerColor = Color(0x05FFFFFF),
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
     focusedBorderColor = MaterialTheme.colorScheme.primary,
-    unfocusedBorderColor = Color(0x2EFFFFFF),
-    disabledBorderColor = Color(0x1AFFFFFF),
+    unfocusedBorderColor = LINE,
+    disabledBorderColor = LINE,
     focusedTextColor = TXT,
     unfocusedTextColor = TXT,
     focusedLabelColor = MaterialTheme.colorScheme.primary,

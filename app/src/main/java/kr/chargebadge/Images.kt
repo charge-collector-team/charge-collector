@@ -59,7 +59,10 @@ import kotlin.random.Random
 const val MEDAL_H = 1.15f
 
 /** Saved images keep the mock's accent whatever the season. */
-private val ACCENT = Color(0xFF3FB6E8)
+private val ACCENT = Color(0xFFB7B8BF)
+// 저장 이미지의 글자는 Compose 테마와 별개로 어두운 인쇄면에 맞춘다.
+private val POSTER_TEXT = Color(0xFFF7F8FA)
+private val POSTER_SUB = Color(0xFFB7B8BF)
 
 /** Whole medals (rim, tab and picture) from assets/medals/{artKey}_{design}_{b|s|g}.webp, decoded once off the main thread. */
 object Art {
@@ -97,12 +100,6 @@ fun DrawScope.drawMedal(badge: Badge, w: Float, at: Offset = Offset.Zero, bare: 
     if (!bare) {
         val sc = Offset(c.x, c.y + r * 0.19f)
         drawCircle(Brush.radialGradient(0f to Color(0x8C000000), 0.7f to Color(0x8C000000), 1f to Color.Transparent, center = sc, radius = r * 1.4f), r * 1.4f, sc)
-        val glow = when (badge.tier) {
-            Tier.GOLD -> Color(0x8CE8C66A)
-            Tier.LIMITED -> Color(0x8C8CBCF0)
-            else -> null
-        }
-        if (glow != null) drawCircle(Brush.radialGradient(0.62f to glow, 1f to Color.Transparent, center = c, radius = r * 1.5f), r * 1.5f, c)
     }
     // Still loading: an empty disc.
     if (whole == null) return drawCircle(Color(0x14FFFFFF), r, c)
@@ -120,7 +117,7 @@ fun DrawScope.drawMedal(badge: Badge, w: Float, at: Offset = Offset.Zero, bare: 
 /** Source as a white glyph in a navy circle: shield-check = charge, arrows = trade, sparkle = synthesis. */
 fun DrawScope.drawSourceMark(s: Source, c: Offset, r: Float) {
     fun p(x: Float, y: Float) = Offset(c.x + x * r, c.y + y * r)
-    drawCircle(Color(0xFF0F1A30), r * 1.14f, c)
+    drawCircle(Color(0xFF26272B), r * 1.14f, c)
     drawCircle(NAVY, r, c)
     val st = Stroke(r * 0.13f, cap = StrokeCap.Round, join = StrokeJoin.Round)
     when (s) {
@@ -169,10 +166,7 @@ private fun textPaint(color: Color, size: Float, bold: Boolean = false, center: 
 private fun DrawScope.text(s: String, x: Float, y: Float, paint: Paint) = drawContext.canvas.nativeCanvas.drawText(s, x, y, paint)
 
 fun DrawScope.nightSky() {
-    drawRect(Brush.verticalGradient(listOf(BG1, BG0)))
-    val c = Offset(size.width * 0.7f, size.height * 0.1f)
-    val r = max(size.width, size.height) * 0.7f
-    scale(1f, 0.58f, pivot = c) { drawCircle(Brush.radialGradient(0f to Color(0xFF18284A), 0.6f to Color.Transparent, center = c, radius = r), r, c) }
+    drawRect(Color(0xFF151618))
 }
 
 /** The tree's box in a scene; q() maps tree fractions to pixels. */
@@ -521,12 +515,12 @@ fun DrawScope.drawAnniversaryMap(paths: MapPaths?, proj: MapProjection, visited:
     paths ?: return
     with(proj) {
         inWorld {
-            drawPath(paths.land, Color(0xFF16233F))
+            drawPath(paths.land, Color(0xFF292B30))
             visited.forEach { drawPath(paths.region(it), ACCENT.copy(alpha = 0.42f)) }
             // Width 0 is a hairline: one pixel at any zoom.
             drawPath(paths.municipal, Color(0x1AFFFFFF), style = Stroke(0f))
             drawPath(paths.province, Color(0x47FFFFFF), style = Stroke(0f))
-            drawPath(paths.coast, Color(0xFF4A6A9A), style = Stroke(0f))
+            drawPath(paths.coast, Color(0xFF777A83), style = Stroke(0f))
         }
     }
 }
@@ -550,9 +544,9 @@ fun DrawScope.drawAnniversaryMarks(
         drawLine(ACCENT.copy(alpha = 0.25f), a, b, u * 0.022f, StrokeCap.Round)
         drawLine(ACCENT, a, b, u * 0.006f, StrokeCap.Round)
     }
-    ps.indices.forEach { if (it != selected && at[it] != ps[it]) drawLine(TXT.copy(alpha = 0.4f), ps[it], at[it], u * 0.0025f) }
+    ps.indices.forEach { if (it != selected && at[it] != ps[it]) drawLine(POSTER_TEXT.copy(alpha = 0.4f), ps[it], at[it], u * 0.0025f) }
     ps.forEach { drawCircle(ACCENT, u * 0.008f, it) }
-    val tag = textPaint(TXT, mw * 0.34f, bold = true, center = true)
+    val tag = textPaint(POSTER_TEXT, mw * 0.34f, bold = true, center = true)
     fun medal(i: Int) {
         val q = at[i]
         drawCircle(Brush.radialGradient(0f to ACCENT.copy(alpha = 0.35f), 1f to Color.Transparent, center = q, radius = mw), mw, q)
@@ -571,10 +565,10 @@ fun DrawScope.drawAnniversaryMarks(
         drawCircle(ACCENT, u * 0.01f, p, style = Stroke(u * 0.004f))
         medal(i)
         val name = points[i].first.name
-        val paint = textPaint(TXT, mw * 0.3f, bold = true, center = true)
+        val paint = textPaint(POSTER_TEXT, mw * 0.3f, bold = true, center = true)
         val tw = paint.measureText(name)
         val base = p.y + u * 0.03f + mw * 0.32f
-        drawRoundRect(Color(0xE60A1222), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f))
+        drawRoundRect(Color(0xE6151618), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f))
         drawRoundRect(ACCENT.copy(alpha = 0.6f), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f), style = Stroke(u * 0.002f))
         text(name, p.x, base, paint)
     }
@@ -639,23 +633,23 @@ fun DrawScope.drawAnniversaryTitle(count: Int, period: String) {
     val w = size.width
     val h = size.height
     val u = min(w, h)
-    val night = Color(0xFF0A1222)
+    val night = Color(0xFF151618)
     drawRect(Brush.horizontalGradient(0f to Color.Transparent, 0.4f to night.copy(alpha = 0.8f), 1f to night, startX = w * 0.5f, endX = w), Offset(w * 0.5f, 0f), Size(w * 0.5f, h))
     val pad = u * 0.07f
     val x0 = w * 0.58f + pad
-    text("우리의 1주년", x0, pad + u * 0.09f, textPaint(TXT, u * 0.095f, bold = true))
+    text("우리의 1주년", x0, pad + u * 0.09f, textPaint(POSTER_TEXT, u * 0.095f, bold = true))
     text("차와 함께 쌓은 충전의 기억", x0, pad + u * 0.165f, textPaint(ACCENT, u * 0.042f, bold = true))
     val mid = h * 0.45f
-    text("1년 동안 충전하며 다닌 길", x0, mid, textPaint(TXT, u * 0.05f, bold = true))
-    text("직접 충전한 장소 ${count}곳을", x0, mid + u * 0.065f, textPaint(SUB, u * 0.036f))
-    text("첫 방문 순서로 이었어요", x0, mid + u * 0.112f, textPaint(SUB, u * 0.036f))
+    text("1년 동안 충전하며 다닌 길", x0, mid, textPaint(POSTER_TEXT, u * 0.05f, bold = true))
+    text("직접 충전한 장소 ${count}곳을", x0, mid + u * 0.065f, textPaint(POSTER_SUB, u * 0.036f))
+    text("첫 방문 순서로 이었어요", x0, mid + u * 0.112f, textPaint(POSTER_SUB, u * 0.036f))
     text(period, x0, h - pad, textPaint(ACCENT, u * 0.042f, face = NumFaceBold))
 }
 
 /** The boundary data's source, bottom right; 공공누리 제1유형 asks for it on every use. */
 fun DrawScope.drawAnniversarySource() {
     val u = min(size.width, size.height)
-    val paint = textPaint(SUB.copy(alpha = 0.75f), u * 0.022f)
+    val paint = textPaint(POSTER_SUB.copy(alpha = 0.75f), u * 0.022f)
     val s = "지도: 통계청 통계지리정보서비스(2018)"
     text(s, size.width - u * 0.03f - paint.measureText(s), size.height - u * 0.025f, paint)
 }
