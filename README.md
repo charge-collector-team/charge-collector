@@ -13,6 +13,9 @@
 |---|---|---|---|
 | ![교환](docs/screenshots/04_friends.png) | ![교환 제안](docs/screenshots/05_trade.png) | ![1주년](docs/screenshots/06_anniversary.png) | ![연말 트리](docs/screenshots/07_tree.png) |
 
+- **APK**: [apk/도미닉_충전수집첩_release.apk](apk/도미닉_충전수집첩_release.apk)
+- **시연 영상**: [docs/demo/demo.mp4](docs/demo/demo.mp4) (1분 53초, 에뮬레이터 화면 녹화). 도감, 충전으로 배지 받기, 교환, 1주년 지도, 연말 트리, 주행 중 화면 제한 순서입니다.
+
 ## 무엇을 하나요
 
 - **충전하면 배지**: 공공 충전소 반경 50m 안에서 충전율이 3%p 이상 오르면 그 시·군·구 배지를 받습니다. 같은 충전소는 하루에 한 번만 판정합니다. 지금은 배지 도안이 있는 8곳(고양, 이천, 송파, 공주, 경주, 영덕, 횡성, 정읍)에서만 배지가 나옵니다.
@@ -33,6 +36,13 @@
 | CarUxRestrictionsManager | 주행 중에는 화면을 닫고 충전 확인만 계속 |
 | BOOT_COMPLETED + 포그라운드 서비스 | 시동을 켜면 충전 감지 자동 시작 |
 
+## 테스트 환경
+
+- Pleos Connect 에뮬레이터: Android Automotive API 34 시스템 이미지(pleos_car_emulator, arm64-v8a), 기기 프로필 Pleos_Connect_v2_0. Apple Silicon Mac에서 확인했습니다.
+- 앱은 에뮬레이터의 운전자 사용자(user 10)에서 실행합니다. 아래 `am start` 명령에 `--user 10`이 붙는 이유입니다.
+- minSdk 34, targetSdk 35, JDK 17.
+- 충전 판정을 시험하려면 차량 콘솔 포트 포워딩과, 공공 충전소 50m 안의 차 위치가 필요합니다. 둘 다 아래에 적었습니다.
+
 ## 실행하기
 
 필요한 것: Android SDK, JDK 17, Pleos 에뮬레이터(API 34).
@@ -42,7 +52,7 @@
 adb -e install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK: [release/charge-collector-v0.1.apk](release/charge-collector-v0.1.apk)
+릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK는 [apk/도미닉_충전수집첩_release.apk](apk/도미닉_충전수집첩_release.apk)이고, `adb -e install -r apk/도미닉_충전수집첩_release.apk`로 바로 설치할 수 있습니다.
 
 - **충전 시험**: `adb -e forward tcp:8088 tcp:8088` 뒤 에뮬레이터 차량 콘솔(`http://127.0.0.1:8088`)에서 기어를 P로 두고 충전 포트를 연 다음, 충전율을 1%p씩 올립니다. 에뮬레이터 위치가 공공 충전소 50m 안에 있어야 합니다.
 - **시연용 샘플 데이터**: 아래 명령은 그 날짜를 "오늘"로 두고 1년치 충전 기록을 넣습니다(12월이면 늑구 포함). 도감, 1주년 지도, 연말 트리를 바로 볼 수 있습니다. `--es sample off`는 실제 날짜로 되돌립니다.
@@ -79,6 +89,13 @@ docs/   스크린샷, 디자인 검토 자료(design-review), 검수·설계 검
   - `tools/build_korea_map.py`로 점 257,545개를 38,654개로 줄였습니다.
   - 2018년 이후 새로 생긴 11개 구는 옛 경계로 대신 칠합니다.
 - **배지 그림**: 팀 제작. 피그마에서 내보낸 메달 판을 `tools/cut_medals.py`로 지역·도안·등급별 파일 30개로 잘랐고, 늑구 한정 메달은 같은 스크립트의 한 장 모드로 넣었습니다.
+
+## 사용한 라이브러리와 라이선스
+
+- Pleos Vehicle SDK 2.3.2, NaviHelper 3.0.5, FusedLocation 1.1.3: Pleos Playground에서 받은 SDK이며 제공처의 이용 조건을 따릅니다.
+- Jetpack Compose(BOM 2024.10.01), Material 3, Activity Compose 1.9.3, Kotlin 표준 라이브러리: Apache License 2.0.
+- 글꼴: 차량에 들어 있는 Pleos 글꼴(`/product/fonts`)을 읽어 쓰며, 앱에는 글꼴 파일을 넣지 않았습니다.
+- 충전소·경계 데이터와 배지 그림의 출처는 위 '데이터와 출처'에 있습니다.
 
 ## 알려진 한계
 
