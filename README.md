@@ -1,4 +1,4 @@
-# 충전 수집첩
+# Charge Collect (충전 수집첩)
 
 > **디자인 변경 검토 자료**: [화면별 전후 캡처·검증·머지 확인목록](docs/design-review/README.md). 기존 화면 구성을 유지한 디자인 변경이며, 아래 스크린샷과 release APK는 변경 후 화면입니다.
 
@@ -13,7 +13,7 @@
 |---|---|---|---|
 | ![교환](docs/screenshots/04_friends.png) | ![교환 제안](docs/screenshots/05_trade.png) | ![1주년](docs/screenshots/06_anniversary.png) | ![연말 트리](docs/screenshots/07_tree.png) |
 
-- **APK**: [apk/도미닉_충전수집첩_release.apk](apk/도미닉_충전수집첩_release.apk)
+- **APK**: [apk/도미닉_ChargeCollect_release.apk](apk/도미닉_ChargeCollect_release.apk)
 - **시연 영상**: [docs/demo/demo.mp4](docs/demo/demo.mp4) (1분 53초, 에뮬레이터 화면 녹화). 도감, 충전으로 배지 받기, 교환, 1주년 지도, 연말 트리, 주행 중 화면 제한 순서입니다.
 
 ## 무엇을 하나요
@@ -52,7 +52,7 @@
 adb -e install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK는 [apk/도미닉_충전수집첩_release.apk](apk/도미닉_충전수집첩_release.apk)이고, `adb -e install -r apk/도미닉_충전수집첩_release.apk`로 바로 설치할 수 있습니다.
+릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK는 [apk/도미닉_ChargeCollect_release.apk](apk/도미닉_ChargeCollect_release.apk)이고, `adb -e install -r apk/도미닉_ChargeCollect_release.apk`로 바로 설치할 수 있습니다.
 
 - **충전 시험**: `adb -e forward tcp:8088 tcp:8088` 뒤 에뮬레이터 차량 콘솔(`http://127.0.0.1:8088`)에서 기어를 P로 두고 충전 포트를 연 다음, 충전율을 1%p씩 올립니다. 에뮬레이터 위치가 공공 충전소 50m 안에 있어야 합니다.
 - **시연용 샘플 데이터**: 아래 명령은 그 날짜를 "오늘"로 두고 1년치 충전 기록을 넣습니다(12월이면 늑구 포함). 도감, 1주년 지도, 연말 트리를 바로 볼 수 있습니다. `--es sample off`는 실제 날짜로 되돌립니다.
