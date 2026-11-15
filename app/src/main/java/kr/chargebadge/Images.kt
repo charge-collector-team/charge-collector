@@ -544,10 +544,12 @@ fun DrawScope.drawAnniversaryMarks(
     ps.indices.forEach { if (it != selected && at[it] != ps[it]) drawLine(POSTER_TEXT.copy(alpha = 0.4f), ps[it], at[it], u * 0.0025f) }
     ps.forEach { drawCircle(HIGHLIGHT, u * 0.008f, it) }
     val tag = textPaint(POSTER_TEXT, mw * 0.34f, bold = true, center = true)
-    fun medal(i: Int) {
+    // The selected medal grows as the map zooms to it (same blend as in the layout).
+    val sw = mw * (1f + (SELECTED_SCALE - 1f) * ((zoom - 1f) / 0.8f).coerceIn(0f, 1f))
+    fun medal(i: Int, w: Float = mw) {
         val q = at[i]
-        drawCircle(Brush.radialGradient(0f to ACCENT.copy(alpha = 0.35f), 1f to Color.Transparent, center = q, radius = mw), mw, q)
-        translate(q.x - mw / 2, q.y - mw / 2) { drawMedalCached(points[i].second, mw) }
+        drawCircle(Brush.radialGradient(0f to ACCENT.copy(alpha = 0.35f), 1f to Color.Transparent, center = q, radius = w), w, q)
+        translate(q.x - w / 2, q.y - w / 2) { drawMedalCached(points[i].second, w) }
     }
     points.indices.filter { it != selected }.forEach { i ->
         medal(i)
@@ -556,11 +558,11 @@ fun DrawScope.drawAnniversaryMarks(
     // The selected place: a pin at the station, its medal on a stem above it and the station's name below.
     selected?.let { i ->
         val p = ps[i]
-        drawLine(HIGHLIGHT, p, at[i] + Offset(0f, mw / 2), u * 0.004f)
+        drawLine(HIGHLIGHT, p, at[i] + Offset(0f, sw / 2), u * 0.004f)
         drawCircle(HIGHLIGHT.copy(alpha = 0.3f), u * 0.024f, p)
         drawCircle(Color.White, u * 0.01f, p)
         drawCircle(HIGHLIGHT, u * 0.01f, p, style = Stroke(u * 0.004f))
-        medal(i)
+        medal(i, sw)
         val name = points[i].first.name
         val paint = textPaint(POSTER_TEXT, mw * 0.3f, bold = true, center = true)
         val tw = paint.measureText(name)
@@ -571,10 +573,13 @@ fun DrawScope.drawAnniversaryMarks(
     }
 }
 
+/** How much larger the tapped medal is drawn once the map has zoomed to its station. */
+private const val SELECTED_SCALE = 1.7f
+
 /** Index of the anniversary medal under [tap] (image space), as [drawAnniversaryMarks] places them. */
 fun anniversaryMarkAt(points: List<Pair<Station, Badge>>, proj: MapProjection, size: Size, zoom: Float, pan: Offset, selected: Int?, tap: Offset): Int? {
     val (_, at, mw) = anniversaryMarkLayout(points, proj, size, zoom, pan, selected)
-    return at.indices.minByOrNull { (at[it] - tap).getDistance() }?.takeIf { (at[it] - tap).getDistance() < mw * 0.65f }
+    return at.indices.minByOrNull { (at[it] - tap).getDistance() }?.takeIf { (at[it] - tap).getDistance() < mw * 0.65f * if (it == selected) SELECTED_SCALE else 1f }
 }
 
 /** Places on the image, medal centers and medal width. */
@@ -621,8 +626,8 @@ private fun anniversaryMarkLayout(points: List<Pair<Station, Badge>>, proj: MapP
         q
     }
     val t = ((zoom - 1f) / 0.8f).coerceIn(0f, 1f)
-    // On its place, the selected medal rises above the station so the pin under it shows.
-    return MarkLayout(ps, ps.indices.map { slot[it]!! + (onPlace[it] - slot[it]!!) * t + if (it == selected) Offset(0f, -mw * 1.1f) * t else Offset.Zero }, mw)
+    // On its place, the selected medal (SELECTED_SCALE times larger) rises so its bottom clears the pin by 0.6 mw.
+    return MarkLayout(ps, ps.indices.map { slot[it]!! + (onPlace[it] - slot[it]!!) * t + if (it == selected) Offset(0f, -mw * (0.6f + SELECTED_SCALE / 2)) * t else Offset.Zero }, mw)
 }
 
 /** Title on a fade into the night, not on a separate panel. */

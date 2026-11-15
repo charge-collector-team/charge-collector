@@ -622,9 +622,11 @@ fun EmptySlot(size: Dp) {
 
 /** Recessed round slot a medal sits in. */
 @Composable
-fun Well(size: Dp, selected: Boolean = false, selectionColor: Color = Color.White, content: @Composable () -> Unit) {
+fun Well(size: Dp, selected: Boolean = false, selectionColor: Color = Color.White, bare: Boolean = false, content: @Composable () -> Unit) {
     Box(
+        // [bare]: no black well, for slots on white cards where it reads as a black outline.
         Modifier.size(size).drawBehind {
+            if (bare) return@drawBehind
             val r = this.size.minDimension / 2
             drawCircle(Brush.radialGradient(0f to Color(0xFF252629), 0.7f to Color(0xFF121315), center = Offset(center.x, center.y - r * 0.2f), radius = r), r)
             // inset shadow from the top edge, faint light on the bottom lip
@@ -656,6 +658,8 @@ fun BadgeSlot(
     note: String? = null,
     /** Unowned slots stand for a whole design unless this asks for the tier chip too. */
     lockedTier: Boolean = false,
+    /** On a white card: draw the medal without the black well. */
+    bare: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(26.dp)
@@ -667,7 +671,7 @@ fun BadgeSlot(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box {
-            Well(well, selected = selected, selectionColor = HIGHLIGHT) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
+            Well(well, selected = selected, selectionColor = HIGHLIGHT, bare = bare) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
             if (owned && count > 0) CountChip(count, well, Modifier.align(Alignment.BottomStart).offset(x = (-4).dp))
         }
         Spacer(Modifier.height(16.dp))

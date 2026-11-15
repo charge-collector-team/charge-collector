@@ -583,6 +583,8 @@ private fun DetailCard(s: Screen.Detail, onClose: () -> Unit, modifier: Modifier
             }
             Box(
                 Modifier.fillMaxWidth().height(medal + 56.dp).drawBehind {
+                    // A badge not got yet is drawn grey with no glow: a tier glow behind it reads as fog.
+                    if (count == 0) return@drawBehind
                     val r = medal.toPx() * 0.85f
                     val c = Offset(center.x, center.y + 12.dp.toPx())
                     drawCircle(Brush.radialGradient(0f to glow.copy(alpha = 0.28f), 1f to Color.Transparent, center = c, radius = r), r, c)
@@ -938,7 +940,7 @@ private fun FriendCard(f: Friend, pending: Int, modifier: Modifier, onTrade: () 
         }
         Note("바꿀 수 있는 동 배지 ${f.badges.filterKeys { it.tier == Tier.BRONZE }.values.sum()}개")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            f.badges.forEach { (b, n) -> BadgeSlot(b, n, owned = true, well = 96.dp) }
+            f.badges.forEach { (b, n) -> BadgeSlot(b, n, owned = true, well = 96.dp, bare = true) }
         }
         if (pending > 0) Btn("제안 확인하기", Modifier.fillMaxWidth(), onClick = onTrade) else OutlineBtn("교환하기", Modifier.fillMaxWidth(), onClick = onTrade)
     }
