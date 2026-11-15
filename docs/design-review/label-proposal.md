@@ -14,7 +14,14 @@
 - 별도의 연결 고리, 타공, 매달린 원형/타원 참, 사각 태그는 사용하지 않음.
 - 클립과 메달을 하나의 단위로 확대·축소하며 수량·선택선과 겹침을 확인.
 
-시안의 메달 외곽 반지름을 137로 볼 때 클립의 외곽/안쪽 반지름은 150/127, 각도는 오른쪽 방향 기준 아래로 18~69도입니다. `labels/build_exchange_clip.py`가 원본 도형과 PNG/SVG를 생성합니다. 이 수치는 시안 비례이며 앱의 최종 픽셀 크기는 아닙니다.
+시안의 메달 외곽 반지름을 137로 볼 때 클립의 외곽/안쪽 반지름은 150/127, 각도는 오른쪽 방향 기준 아래로 18~69도입니다. `labels/build_exchange_clip.py`는 SVG를 생성합니다. PNG는 아래 별도 렌더 명령으로 생성합니다. 이 수치는 시안 비례이며 앱의 최종 픽셀 크기는 아닙니다.
+
+재생성 명령(저장소 루트에서 실행, Python Pillow·rsvg-convert 필요):
+
+```bash
+python3 docs/design-review/labels/build_exchange_clip.py
+rsvg-convert docs/design-review/labels/exchange-clip-selected.svg -o docs/design-review/labels/exchange-clip-selected.png
+```
 
 ## 표시 의미와 개발 검토
 

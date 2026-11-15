@@ -1,8 +1,9 @@
 # 기존 화면 구성 + Pleos 스타일 검토
 
-**main에 바로 합치지 않고, 이 문서의 전후 캡처와 실행 결과를 검토한 뒤 머지하는 브랜치입니다.**
+**스타일 변경 PR #2는 main의 `c271245`에 머지되었습니다. 이 문서의 전후 캡처는 해당 스타일 변경 기록입니다. 이후 선택한 교환 클립은 앱 미적용 자료이며 별도 후속 PR에서 검토합니다.**
 
-- 브랜치: `codex/pleos-style-preview`
+- 기존 스타일 브랜치: `codex/pleos-style-preview`
+- 교환 클립 후속 브랜치: `codex/exchange-clip-selected`
 - 기준 main: `491117e25522bf6cf6e9566650886809ca342750`
 - 변경 전: 해당 main에 포함된 `release/charge-collector-v0.1.apk` 실행 화면.
 - 변경 후: 이 브랜치 소스로 빌드한 APK 실행 화면.
