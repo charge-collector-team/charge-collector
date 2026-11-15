@@ -19,7 +19,7 @@
 
 ## 라벨 시안과 기술 검토 분리
 
-[교환 키링·한정 에디션 시안](label-proposal.md)은 **앱 미적용 디자인 제안**입니다. 기각된 사각 명패안은 포함하지 않습니다. [보유 출처의 기술 검토 PR #3](https://github.com/charge-collector-team/charge-collector/pull/3)은 별도 브랜치의 문서이며, 이 디자인 PR에는 기능·데이터 변경을 넣지 않습니다.
+[교환 표식 선택안: 3번 곡선 클립](label-proposal.md)은 **형태 선택 완료·앱 미적용 디자인 자료**입니다. 확대 PNG와 SVG·생성 소스를 포함하며, 매달린 키링 대신 테두리에 밀착하는 클립을 사용합니다. 이전 키링·한정 전용 프레임 보드는 과거 제안 기록입니다. [보유 출처의 기술 검토 PR #3](https://github.com/charge-collector-team/charge-collector/pull/3)은 별도 브랜치의 문서이며, 이 디자인 PR에는 기능·데이터 변경을 넣지 않습니다.
 
 ## 변경 범위
 
