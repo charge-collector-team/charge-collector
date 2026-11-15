@@ -1,0 +1,61 @@
+{
+  "app_name_ko": "차지 컬렉션",
+  "app_name_en": "Charge Collection",
+  "team": "도미닉",
+  "verified_date": "2026-11-15",
+  "base_main": "85faba15ca9f6ba525c7a334cfeaefb18f40bce4",
+  "apk": {
+    "path": "apk/도미닉_차지컬렉션_release.apk",
+    "bytes": 26797806,
+    "sha256": "3f93338d9e9d5786e6eb05e581c7c683ff54262001bc1c262edac1e0120a714d",
+    "git_blob": "aa458fe27defda50e9d11424f2295075b2932b6f",
+    "change": "filename_only; original bytes preserved; no rebuild"
+  },
+  "video": {
+    "path": "docs/demo/demo.mp4",
+    "bytes": 15296301,
+    "sha256": "490130095e00d7557db860b0043867e1d58d229856372ff4f77c4605690cc72b",
+    "git_blob": "0fffa915eb2666976f64088ff4ee5cb8c94e1d06",
+    "duration_seconds": 112.733333,
+    "width": 1920,
+    "height": 1080,
+    "fps": "30/1",
+    "video_codec": "hevc",
+    "change": "exact copy of user-provided new video; no edit or transcode; Downloads source preserved"
+  },
+  "previous_video": {
+    "path": "docs/demo/demo.mp4",
+    "commit": "85faba15ca9f6ba525c7a334cfeaefb18f40bce4",
+    "bytes": 6403176,
+    "sha256": "e97c7e9b79c7c3a21d384ad02ed26fc3f07cfec99be400dbddeb4acd7b35f0d2",
+    "git_blob": "9c028339695fc3b5cb2418feeacbfb0270b341eb",
+    "preservation": "preserved in base commit and separate local backup outside repository"
+  },
+  "emulator": {
+    "pleos_connect_version": "2.1.0",
+    "android_build_id": "RELEASE.release_connect_v2.1.0",
+    "android_release": "14",
+    "api_level": 34,
+    "abi": "arm64-v8a",
+    "system_image_vendor": "42dot Inc.",
+    "system_image_revision": 1,
+    "android_emulator_version": "36.5.11.0",
+    "android_emulator_build": 15261927,
+    "avd": "N07_Pleos_2_1",
+    "device_profile": "automotive_1024p_landscape",
+    "runtime_width": 2560,
+    "runtime_height": 1440,
+    "density_dpi": 160,
+    "default_avd_width": 1024,
+    "default_avd_height": 768,
+    "evidence": [
+      "system image build.prop: ro.build.id and ro.build.version.release/sdk",
+      "system image source.properties and package.xml: API, ABI, vendor, revision",
+      "emulator source.properties and startup log: version and build",
+      "AVD config.ini: AVD name and hw.device.name",
+      "AVD hardware-qemu.ini: runtime hw.lcd.width, hw.lcd.height, hw.lcd.density",
+      "ffprobe on new video: encoded width, height, duration, codec, fps"
+    ]
+  },
+  "scope": "README, APK filename, user-provided video copy, verification metadata only; no app/runtime/package/applicationId changes; no signature, contact, or application documents included"
+}
