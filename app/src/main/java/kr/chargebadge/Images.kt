@@ -91,16 +91,13 @@ object Art {
 
 /**
  * Medal disc [w] wide with its box's top-left at [at]; the ring tab is drawn above the box.
- * [bare] skips drop shadow and glow (for medals inside glass ornaments).
+ * 원본 메달의 금속 음영만 사용한다. 밝은 카드에 번지는 별도 원형 그림자는 그리지 않는다.
  */
+@Suppress("UNUSED_PARAMETER") // 기존 호출 시그니처는 유지하며 모든 메달의 외부 그림자를 없앤다.
 fun DrawScope.drawMedal(badge: Badge, w: Float, at: Offset = Offset.Zero, bare: Boolean = false) {
     val r = w / 2
     val c = Offset(at.x + r, at.y + r)
     val whole = Art.medal(badge)
-    if (!bare) {
-        val sc = Offset(c.x, c.y + r * 0.19f)
-        drawCircle(Brush.radialGradient(0f to Color(0x8C000000), 0.7f to Color(0x8C000000), 1f to Color.Transparent, center = sc, radius = r * 1.4f), r * 1.4f, sc)
-    }
     // Still loading: an empty disc.
     if (whole == null) return drawCircle(Color(0x14FFFFFF), r, c)
     // The disc (rim included) of the whole-medal image lands on this medal's disc; its tab rises above.
@@ -673,7 +670,7 @@ private val medalCache = object : LruCache<MedalKey, ImageBitmap>(48 * 1024 * 10
  */
 fun medalImage(badge: Badge, px: Int): ImageBitmap {
     val key = MedalKey(badge, px, Art.medal(badge))
-    // Shadow, gold glow and the ring tab reach 0.3w past the medal box.
+    // 원본 메달 이미지의 여백과 위로 솟은 고리가 잘리지 않도록 같은 캐시 여백을 유지한다.
     val pad = (px * 0.3f).roundToInt()
     return medalCache.get(key) ?: drawToBitmap(px + 2 * pad, px + 2 * pad) { drawMedal(badge, px.toFloat(), Offset(pad.toFloat(), pad.toFloat())) }
         .asImageBitmap().also { medalCache.put(key, it) }
