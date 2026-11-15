@@ -1,6 +1,8 @@
-# Charge Collect (충전 수집첩)
+# 차지 컬렉션 (Charge Collection)
 
-> **디자인 변경 검토 자료**: [화면별 전후 캡처·검증·머지 확인목록](docs/design-review/README.md). 기존 화면 구성을 유지한 디자인 변경이며, 아래 스크린샷과 release APK는 변경 후 화면입니다.
+팀: **도미닉**
+
+> **디자인 변경 검토 자료**: [화면별 전후 캡처·검증·머지 확인목록](docs/design-review/README.md). 기존 화면 구성을 유지한 디자인 변경이며, 아래 스크린샷과 제출 APK는 변경 후 화면입니다.
 
 전기차를 충전한 시·군·구의 배지를 모으는 Pleos Connect 차량용 앱입니다.
 차가 직접 측정한 충전율과 내비게이션 위치로 "이 충전소에서 충전했다"를 확인하고, 그 지역의 배지를 줍니다.
@@ -13,8 +15,8 @@
 |---|---|---|---|
 | ![교환](docs/screenshots/04_friends.png) | ![교환 제안](docs/screenshots/05_trade.png) | ![1주년](docs/screenshots/06_anniversary.png) | ![연말 트리](docs/screenshots/07_tree.png) |
 
-- **APK**: [apk/도미닉_ChargeCollect_release.apk](apk/도미닉_ChargeCollect_release.apk)
-- **시연 영상**: [docs/demo/demo.mp4](docs/demo/demo.mp4) (1분 53초, 에뮬레이터 화면 녹화). 도감, 충전으로 배지 받기, 교환, 1주년 지도, 연말 트리, 주행 중 화면 제한 순서입니다.
+- **APK**: [apk/도미닉_차지컬렉션_release.apk](apk/도미닉_차지컬렉션_release.apk)
+- **시연 영상**: [docs/demo/demo.mp4](docs/demo/demo.mp4) (112.733초 · 1920×1080 · 사용자 제공 새 시연 영상 원본). 도감, 충전으로 배지 받기, 교환, 1주년 지도, 연말 트리, 주행 중 화면 제한 순서입니다.
 
 ## 무엇을 하나요
 
@@ -38,7 +40,19 @@
 
 ## 테스트 환경
 
-- Pleos Connect 에뮬레이터: Android Automotive API 34 시스템 이미지(pleos_car_emulator, arm64-v8a), 기기 프로필 Pleos_Connect_v2_0. Apple Silicon Mac에서 확인했습니다.
+Apple Silicon Mac의 다음 환경에서 확인했습니다. 화면 규격은 영상 파일 크기와 구분합니다.
+
+| 항목 | 확인한 값 |
+|---|---|
+| Pleos Connect 시스템 버전 | **2.1.0** (`RELEASE.release_connect_v2.1.0`, 시스템 이미지 `build.prop`) |
+| Android 시스템 이미지 | Android Automotive 14 / API 34 / arm64-v8a, 42dot 제공, 패키지 revision 1 |
+| Android Emulator | **36.5.11.0**, build 15261927 |
+| AVD / 기기 프로필 | `N07_Pleos_2_1` / `automotive_1024p_landscape` |
+| 실제 실행 화면 | **2560×1440 px**, 가로, **160dpi** (`hardware-qemu.ini`) |
+| 제출 영상 파일 | **1920×1080 px**, 30fps, 112.733초 (파일 메타데이터 기준) |
+
+설치된 이미지의 `build.prop`·`source.properties`, AVD의 `config.ini`·`hardware-qemu.ini`, 에뮬레이터 버전 로그, 영상의 `ffprobe` 결과로 확인했습니다. 1920×1080은 제출 영상의 인코딩 규격이며 에뮬레이터 실행 화면 규격은 2560×1440입니다. 파일별 무결성·이전 영상 보존 근거는 [제출 자료 확인 기록](docs/submission/verification.json)에 있습니다.
+
 - 앱은 에뮬레이터의 운전자 사용자(user 10)에서 실행합니다. 아래 `am start` 명령에 `--user 10`이 붙는 이유입니다.
 - minSdk 34, targetSdk 35, JDK 17.
 - 충전 판정을 시험하려면 차량 콘솔 포트 포워딩과, 공공 충전소 50m 안의 차 위치가 필요합니다. 둘 다 아래에 적었습니다.
@@ -52,7 +66,7 @@
 adb -e install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK는 [apk/도미닉_ChargeCollect_release.apk](apk/도미닉_ChargeCollect_release.apk)이고, `adb -e install -r apk/도미닉_ChargeCollect_release.apk`로 바로 설치할 수 있습니다.
+릴리스 빌드는 시연 편의를 위해 디버그 키로 서명합니다. 미리 빌드한 APK는 [apk/도미닉_차지컬렉션_release.apk](apk/도미닉_차지컬렉션_release.apk)이고, `adb -e install -r apk/도미닉_차지컬렉션_release.apk`로 바로 설치할 수 있습니다.
 
 - **충전 시험**: `adb -e forward tcp:8088 tcp:8088` 뒤 에뮬레이터 차량 콘솔(`http://127.0.0.1:8088`)에서 기어를 P로 두고 충전 포트를 연 다음, 충전율을 1%p씩 올립니다. 에뮬레이터 위치가 공공 충전소 50m 안에 있어야 합니다.
 - **시연용 샘플 데이터**: 아래 명령은 그 날짜를 "오늘"로 두고 1년치 충전 기록을 넣습니다(12월이면 늑구 포함). 도감, 1주년 지도, 연말 트리를 바로 볼 수 있습니다. `--es sample off`는 실제 날짜로 되돌립니다.
@@ -88,14 +102,18 @@ docs/   스크린샷, 디자인 검토 자료(design-review), 검수·설계 검
 - **시·군·구 경계**: 통계청 통계지리정보서비스(SGIS) 2018, 공공누리 제1유형([southkorea/southkorea-maps](https://github.com/southkorea/southkorea-maps) 경유).
   - `tools/build_korea_map.py`로 점 257,545개를 38,654개로 줄였습니다.
   - 2018년 이후 새로 생긴 11개 구는 옛 경계로 대신 칠합니다.
-- **배지 그림**: 팀 제작. 피그마에서 내보낸 메달 판을 `tools/cut_medals.py`로 지역·도안·등급별 파일 30개로 잘랐고, 늑구 한정 메달은 같은 스크립트의 한 장 모드로 넣었습니다.
+- **배지 그림**: 고양고양이와 고마곰·공주는 지자체 공식 원화를 이용했고, 바깥 메달 프레임과 화면은 팀이 구성했습니다. 공식 원화까지 모두 팀 제작이라는 뜻은 아닙니다. [캐릭터별 공식 출처·원화 보존 기록·이용조건](docs/submission/ASSET_ATTRIBUTION.md)을 함께 확인해 주세요.
+  - 고양: [고양시 일러스트](https://www.goyang.go.kr/www/user/bbs/BD_selectBbsList.do?q_bbsCode=1054)의 ‘하이인사’ 원화.
+  - 공주: [공주시 기본형](https://www.gongju.go.kr/brand/sub02_03.do)의 고마곰과 공주 원화. 공식 Adobe Illustrator 원본의 캐릭터 한 쌍을 사용했습니다.
+  - 두 원화는 **공공누리 제3유형(출처 표시·변경금지)** 조건을 따릅니다. 별도 이용허락이나 지자체의 후원·승인은 받지 않았습니다. 고양시의 디자인 응용 협의 조건과 현재 프레임 결합의 허용 범위는 별도 확인이 남아 있습니다.
+  - 피그마에서 내보낸 메달 판을 `tools/cut_medals.py`로 지역·도안·등급별 파일 30개로 나누고 WEBP로 변환했습니다. 늑구 한정 메달은 같은 스크립트의 한 장 모드로 넣었습니다. 공식 원본과 APK 안 파일의 바이트가 같다는 의미는 아닙니다.
 
 ## 사용한 라이브러리와 라이선스
 
 - Pleos Vehicle SDK 2.3.2, NaviHelper 3.0.5, FusedLocation 1.1.3: Pleos Playground에서 받은 SDK이며 제공처의 이용 조건을 따릅니다.
 - Jetpack Compose(BOM 2024.10.01), Material 3, Activity Compose 1.9.3, Kotlin 표준 라이브러리: Apache License 2.0.
 - 글꼴: 차량에 들어 있는 Pleos 글꼴(`/product/fonts`)을 읽어 쓰며, 앱에는 글꼴 파일을 넣지 않았습니다.
-- 충전소·경계 데이터와 배지 그림의 출처는 위 '데이터와 출처'에 있습니다.
+- 충전소·경계 데이터의 출처는 위 ‘데이터와 출처’에, 공식 캐릭터별 조건과 배포 시 주의사항은 [캐릭터 출처·이용조건](docs/submission/ASSET_ATTRIBUTION.md)에 있습니다. APK·영상·이미지를 따로 전달할 때도 이 출처 문서를 함께 제공해야 합니다.
 
 ## 알려진 한계
 
@@ -103,3 +121,5 @@ docs/   스크린샷, 디자인 검토 자료(design-review), 검수·설계 검
 - 친구는 서버 연동 전이라 가짜 친구 3명입니다.
 - 공공데이터 충전소 중 일부(약 1.8%)는 좌표가 부정확해 50m 판정에서 빠질 수 있습니다.
 - 경계 데이터가 2018년 기준입니다.
+
+- 공식 캐릭터는 원화 바깥에 별도 프레임을 배치했습니다. 공공누리는 원화의 단순 탑재를 허용한다고 설명하지만, 고양시의 응용 협의와 공주시의 개별 사용승인 절차가 이 앱에 어떻게 적용되는지는 기관 확인을 받지 않았습니다. 미수집 상태의 흑백·반투명 표시는 유지합니다. APK·기념 이미지 단독 공유에도 출처 문서가 필요합니다. [프레임 조건 검토](docs/submission/ASSET_ATTRIBUTION.md#프레임-결합에-대한-추가-확인)를 참고해 주세요.
