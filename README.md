@@ -1,6 +1,6 @@
 # 충전 수집첩
 
-> **디자인 변경 검토 자료**: [화면별 전후 캡처·검증·머지 확인목록](docs/design-review/README.md). 기존 화면 구성을 유지한 디자인 변경입니다. 아래 기존 release APK는 원본이며 수정본은 소스로 빌드해 확인합니다.
+> **디자인 변경 검토 자료**: [화면별 전후 캡처·검증·머지 확인목록](docs/design-review/README.md). 기존 화면 구성을 유지한 디자인 변경이며, 아래 스크린샷과 release APK는 변경 후 화면입니다.
 
 전기차를 충전한 시·군·구의 배지를 모으는 Pleos Connect 차량용 앱입니다.
 차가 직접 측정한 충전율과 내비게이션 위치로 "이 충전소에서 충전했다"를 확인하고, 그 지역의 배지를 줍니다.
@@ -65,7 +65,7 @@ core/   순수 Kotlin 엔진과 테스트
         Calendar(연말·1주년 규칙) · KoreaMap(지도 자산) · Sample(시연 데이터)
 app/    Jetpack Compose 화면, 충전 감지 서비스(ChargeService), 그리기(Images.kt), 움직임(Motion.kt)
 tools/  앱 자산을 만드는 스크립트
-docs/   스크린샷
+docs/   스크린샷, 디자인 검토 자료(design-review), 검수·설계 검토 문서(review)
 ```
 
 엔진 테스트는 `./gradlew :core:test`로 돌립니다(32개).
