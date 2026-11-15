@@ -256,6 +256,8 @@ val SUB: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 val GOLD = Color(0xFFB39459)
 val INK = Color.White
 val NAVY = Color(0xFF44464E)
+/** The one accent, for state only (charging, route, selection): at least 3:1 on the white page and the black case. */
+val HIGHLIGHT = Color(0xFF0091C8)
 
 // 함수명은 기존 호출을 유지하며, 장식용 파란 조명을 평평한 바탕으로 바꾼다.
 fun Modifier.nightBackdrop() = background(BG0)
@@ -592,13 +594,20 @@ fun Medal(badge: Badge, width: Dp, owned: Boolean = true, modifier: Modifier = M
     Canvas(m.size(width), contentDescription = badgeName(Game.index, badge)) { drawMedalCached(badge, size.width, greyed = !owned) }
 }
 
-/** "×3" on a medal's bottom-left. */
+/**
+ * "×3" in the bottom-left corner of a round medal [medal] wide: sized to the medal and meant to sit in the empty
+ * corner outside the disc (place it with a small negative x offset), so it touches only the rim, not the picture.
+ */
 @Composable
-fun CountChip(count: Int, modifier: Modifier = Modifier, color: Color = Color.Unspecified) = Text(
-    "×$count",
-    modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-    fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = if (color == Color.Unspecified) TXT else color,
-)
+fun CountChip(count: Int, medal: Dp, modifier: Modifier = Modifier) {
+    val size = (medal.value * 0.1f).coerceIn(13f, 18f).sp
+    Text(
+        "×$count",
+        modifier.clip(CircleShape).background(Color(0xFF1D1E21)).border(1.dp, Color.White.copy(alpha = 0.85f), CircleShape)
+            .padding(horizontal = 7.dp),
+        fontSize = size, lineHeight = size * 1.25f, fontWeight = FontWeight.Bold, fontFamily = NumFont, color = Color.White,
+    )
+}
 
 /** Dashed empty circle: a slot nothing has been picked for yet. */
 @Composable
@@ -658,8 +667,8 @@ fun BadgeSlot(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box {
-            Well(well, selected = selected, selectionColor = TXT) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
-            if (owned && count > 0) CountChip(count, Modifier.align(Alignment.BottomStart).offset(x = 4.dp, y = (-4).dp), color = Color.White)
+            Well(well, selected = selected, selectionColor = HIGHLIGHT) { Medal(badge, well * 0.89f, owned, loopSpace = false) }
+            if (owned && count > 0) CountChip(count, well, Modifier.align(Alignment.BottomStart).offset(x = (-4).dp))
         }
         Spacer(Modifier.height(16.dp))
         // Slot labels are narrow: "잠실 롯데타워" shows as "롯데타워" (as in the mock), but "도안 2" stays whole.

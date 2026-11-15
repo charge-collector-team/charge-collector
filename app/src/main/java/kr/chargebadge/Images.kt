@@ -513,7 +513,7 @@ fun DrawScope.drawAnniversaryMap(paths: MapPaths?, proj: MapProjection, visited:
     with(proj) {
         inWorld {
             drawPath(paths.land, Color(0xFF292B30))
-            visited.forEach { drawPath(paths.region(it), ACCENT.copy(alpha = 0.42f)) }
+            visited.forEach { drawPath(paths.region(it), HIGHLIGHT.copy(alpha = 0.42f)) }
             // Width 0 is a hairline: one pixel at any zoom.
             drawPath(paths.municipal, Color(0x1AFFFFFF), style = Stroke(0f))
             drawPath(paths.province, Color(0x47FFFFFF), style = Stroke(0f))
@@ -538,11 +538,11 @@ fun DrawScope.drawAnniversaryMarks(
     val u = min(size.width, size.height)
     val (ps, at, mw) = anniversaryMarkLayout(points, proj, size, zoom, pan, selected)
     ps.zipWithNext().forEach { (a, b) ->
-        drawLine(ACCENT.copy(alpha = 0.25f), a, b, u * 0.022f, StrokeCap.Round)
-        drawLine(ACCENT, a, b, u * 0.006f, StrokeCap.Round)
+        drawLine(HIGHLIGHT.copy(alpha = 0.25f), a, b, u * 0.022f, StrokeCap.Round)
+        drawLine(HIGHLIGHT, a, b, u * 0.006f, StrokeCap.Round)
     }
     ps.indices.forEach { if (it != selected && at[it] != ps[it]) drawLine(POSTER_TEXT.copy(alpha = 0.4f), ps[it], at[it], u * 0.0025f) }
-    ps.forEach { drawCircle(ACCENT, u * 0.008f, it) }
+    ps.forEach { drawCircle(HIGHLIGHT, u * 0.008f, it) }
     val tag = textPaint(POSTER_TEXT, mw * 0.34f, bold = true, center = true)
     fun medal(i: Int) {
         val q = at[i]
@@ -556,17 +556,17 @@ fun DrawScope.drawAnniversaryMarks(
     // The selected place: a pin at the station, its medal on a stem above it and the station's name below.
     selected?.let { i ->
         val p = ps[i]
-        drawLine(ACCENT, p, at[i] + Offset(0f, mw / 2), u * 0.004f)
-        drawCircle(ACCENT.copy(alpha = 0.3f), u * 0.024f, p)
+        drawLine(HIGHLIGHT, p, at[i] + Offset(0f, mw / 2), u * 0.004f)
+        drawCircle(HIGHLIGHT.copy(alpha = 0.3f), u * 0.024f, p)
         drawCircle(Color.White, u * 0.01f, p)
-        drawCircle(ACCENT, u * 0.01f, p, style = Stroke(u * 0.004f))
+        drawCircle(HIGHLIGHT, u * 0.01f, p, style = Stroke(u * 0.004f))
         medal(i)
         val name = points[i].first.name
         val paint = textPaint(POSTER_TEXT, mw * 0.3f, bold = true, center = true)
         val tw = paint.measureText(name)
         val base = p.y + u * 0.03f + mw * 0.32f
         drawRoundRect(Color(0xE6151618), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f))
-        drawRoundRect(ACCENT.copy(alpha = 0.6f), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f), style = Stroke(u * 0.002f))
+        drawRoundRect(HIGHLIGHT.copy(alpha = 0.6f), Offset(p.x - tw / 2 - mw * 0.22f, base - mw * 0.36f), Size(tw + mw * 0.44f, mw * 0.5f), CornerRadius(mw * 0.25f), style = Stroke(u * 0.002f))
         text(name, p.x, base, paint)
     }
 }

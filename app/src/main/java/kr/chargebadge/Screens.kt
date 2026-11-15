@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -224,7 +225,7 @@ private fun SilverProgress(have: Int, modifier: Modifier = Modifier) {
 /** Accent ring that fills up to [progress] when shown; its glow breathes while [pulse]. */
 @Composable
 private fun ProgressRing(size: Dp, progress: Float, pulse: Boolean = false, content: @Composable () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = HIGHLIGHT
     val track = LINE
     val fill = remember { Animatable(0f) }
     LaunchedEffect(progress) { fill.animateTo(progress.coerceIn(0f, 1f), tween(1100, easing = Emphasized)) }
@@ -351,7 +352,7 @@ private fun Hero(modifier: Modifier, go: (Screen) -> Unit, openRegion: (Int?) ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                     Box {
                         Medal(shown, w, owned = n > 0)
-                        if (n > 0) CountChip(n, Modifier.align(Alignment.BottomStart))
+                        if (n > 0) CountChip(n, w, Modifier.align(Alignment.BottomStart).offset(x = (-6).dp))
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(designName(shown.design), fontSize = 34.sp, fontWeight = FontWeight.Bold, color = if (n > 0) TXT else SUB, maxLines = 1)
@@ -489,7 +490,7 @@ private fun RegionList(modifier: Modifier, selected: Int?, listState: LazyListSt
 
 @Composable
 private fun RegionRow(label: String, trailing: String, selected: Boolean, onClick: () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = HIGHLIGHT
     val shape = RoundedCornerShape(18.dp)
     val bg by animateColorAsState(if (selected) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant, tween(220), label = "rowBg")
     val edge by animateColorAsState(if (selected) accent else LINE, tween(220), label = "rowEdge")
