@@ -17,6 +17,10 @@
 |---|---|
 | ![그림자 제거 전](shadow-before-collection.png) | ![그림자 제거 후](after-collection.png) |
 
+## 라벨 시안과 기술 검토 분리
+
+[교환 키링·한정 에디션 시안](label-proposal.md)은 **앱 미적용 디자인 제안**입니다. 기각된 사각 명패안은 포함하지 않습니다. [보유 출처의 기술 검토 PR #3](https://github.com/charge-collector-team/charge-collector/pull/3)은 별도 브랜치의 문서이며, 이 디자인 PR에는 기능·데이터 변경을 넣지 않습니다.
+
 ## 변경 범위
 
 | 유지 | 스타일 변경 |
